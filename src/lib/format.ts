@@ -6,6 +6,15 @@ export function formatCents(cents: number, currency = 'AUD') {
   }).format(cents / 100);
 }
 
+/** Formats an already-decimal dollar amount (the finance/QBO endpoints return dollars). */
+export function formatMoney(amount: number, currency = 'AUD') {
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount ?? 0);
+}
+
 export function formatDate(iso: string) {
   return new Intl.DateTimeFormat('en-AU', {
     day: '2-digit',

@@ -128,5 +128,175 @@ export interface Customer {
 
 export interface PaginatedResponse<T> {
   data: T[];
-  meta: { page: number; limit: number; total: number; pageCount: number };
+  meta: { page: number; limit: number; total: number; pages: number };
+}
+
+// ── Operations: credit / invoicing / statements / QuickBooks ──────────────────
+
+export type CreditApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface CreditApplication {
+  id: string;
+  userId: string;
+  status: CreditApplicationStatus;
+  registeredBusinessName: string;
+  tradingName: string | null;
+  abn: string;
+  email: string;
+  phone: string;
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  rejectionReason: string | null;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    dentaplusId: string | null;
+  };
+}
+
+export type InvoiceSyncStatus =
+  | 'DRAFT'
+  | 'OPEN'
+  | 'OVERDUE'
+  | 'PARTIAL'
+  | 'PAID'
+  | 'VOID';
+
+export interface AdminInvoice {
+  id: string;
+  invoiceNo: string;
+  type: 'INVOICE' | 'CREDIT_NOTE';
+  total: number;
+  outstanding: number;
+  amountPaid: number;
+  status: InvoiceSyncStatus | null;
+  payViaQuickbooks: boolean;
+  dueDate: string | null;
+  dateInvoiced: string;
+  customer?: {
+    id: string;
+    email: string;
+    displayName: string | null;
+    dentaplusId: string | null;
+  };
+}
+
+export interface Statement {
+  id: string;
+  statementNo: string;
+  statementDate: string;
+  periodFrom: string | null;
+  periodTo: string | null;
+  openingBalance: number;
+  closingBalance: number;
+}
+
+export interface AgingBuckets {
+  bucket0: number;
+  bucket30: number;
+  bucket60: number;
+  bucket90: number;
+  bucket120: number;
+  bucket120plus: number;
+}
+
+export interface ArReport {
+  totals: AgingBuckets & { total: number };
+  customers: (AgingBuckets & {
+    total: number;
+    customer: { id: string; email: string; displayName: string | null; dentaplusId: string | null };
+  })[];
+}
+
+export interface QuickbooksStatus {
+  configured: boolean;
+  connected: boolean;
+  environment: string;
+  realmId: string | null;
+  accessExpiresAt: string | null;
+  refreshExpiresAt: string | null;
+}
+
+export interface Customer360 extends Customer {
+  dentaplusId: string | null;
+  creditAccountStatus: string;
+  accountBalance: (AgingBuckets & { id: string }) | null;
+  creditAccountApplications: {
+    id: string;
+    status: CreditApplicationStatus;
+    registeredBusinessName: string;
+    submittedAt: string;
+  }[];
+  orders: {
+    id: string;
+    orderNo: string;
+    status: OrderStatus;
+    totalCents: number;
+    orderDate: string | null;
+  }[];
+  invoices: {
+    id: string;
+    invoiceNo: string;
+    type: string;
+    totalCents: number;
+    outstandingCents: number;
+    syncStatus: InvoiceSyncStatus | null;
+    dueDate: string | null;
+    dateInvoiced: string;
+  }[];
+  statements: {
+    id: string;
+    statementNo: string;
+    statementDate: string;
+    closingBalance: number;
+  }[];
+}
+
+export type DiscountType = 'FIXED' | 'PERCENTAGE';
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  type: DiscountType;
+  value: number; // cents when FIXED, percent when PERCENTAGE
+  minOrder: number | null;
+  maxUses: number | null;
+  usedCount: number;
+  expiresAt: string | null;
+  isActive: boolean;
+}
+
+export type OfferRewardType = 'FIXED_DISCOUNT' | 'PERCENTAGE_DISCOUNT' | 'FREE_PRODUCT';
+export type FreeProductScope = 'SAME' | 'SPECIFIC';
+
+export interface Offer {
+  id: string;
+  name: string;
+  description: string | null;
+  minQuantity: number;
+  rewardType: OfferRewardType;
+  discountAmountCents: number | null;
+  discountBps: number | null;
+  freeQty: number | null;
+  freeScope: FreeProductScope | null;
+  isActive: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  product: { id: string; name: string } | null;
+  freeProduct: { id: string; name: string } | null;
+}
+
+export interface DashboardSummary {
+  ordersToday: number;
+  ordersMtd: number;
+  grossSalesMtd: number;
+  newCustomersMtd: number;
+  pendingCreditApplications: number;
+  overdueInvoices: number;
+  pendingQboPushes: number;
+  inventory: { lowStock: number; outOfStock: number };
+  accountsReceivable: { outstanding: number; aging: AgingBuckets };
 }

@@ -30,7 +30,7 @@ export default function LoginPage() {
         return;
       }
       setAuth(data.accessToken, data.user);
-      router.replace('/orders');
+      router.replace('/dashboard');
     } catch {
       toast.error('Invalid email or password.');
     } finally {
