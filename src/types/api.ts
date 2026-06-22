@@ -302,6 +302,50 @@ export interface Offer {
   freeProduct: { id: string; name: string } | null;
 }
 
+// ── Content & support ─────────────────────────────────────────────────────────
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  body: string;
+  featuredImageUrl: string | null;
+  isPublished: boolean;
+  publishedAt: string | null;
+  createdAt: string;
+  author?: { firstName: string | null; lastName: string | null } | null;
+}
+
+export interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface ContactMessage {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  subject: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface AdminReview {
+  id: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  createdAt: string;
+  product: { id: string; name: string } | null;
+  user: { id: string; email: string; displayName: string | null } | null;
+}
+
 export interface DashboardSummary {
   ordersToday: number;
   ordersMtd: number;

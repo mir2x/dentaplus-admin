@@ -15,6 +15,10 @@ import {
   Users,
   Tag,
   Gift,
+  Newspaper,
+  HelpCircle,
+  Mail,
+  Star,
   Settings,
 } from 'lucide-react';
 import {
@@ -60,6 +64,15 @@ const navGroups = [
     items: [
       { href: '/promo-codes', label: 'Promo Codes', icon: Tag },
       { href: '/offers', label: 'Offers', icon: Gift },
+    ],
+  },
+  {
+    label: 'Content',
+    items: [
+      { href: '/blog', label: 'Blog', icon: Newspaper },
+      { href: '/faq', label: 'FAQ', icon: HelpCircle },
+      { href: '/contact-messages', label: 'Contact', icon: Mail },
+      { href: '/reviews', label: 'Reviews', icon: Star },
     ],
   },
   {
