@@ -33,6 +33,18 @@ export interface Order {
   payment: OrderPayment | null;
   shipping: OrderShipping | null;
   notes: OrderNote[];
+  quickbooksSyncPending?: boolean;
+  invoices?: OrderInvoiceRef[];
+}
+
+export interface OrderInvoiceRef {
+  id: string;
+  invoiceNo: string;
+  type: string;
+  totalCents: number;
+  outstandingCents: number;
+  syncStatus: InvoiceSyncStatus | null;
+  quickbooksInvoiceId: string | null;
 }
 
 export interface OrderItem {
@@ -94,6 +106,7 @@ export interface Product {
   published: boolean;
   featured: boolean;
   shortDescription: string | null;
+  quickbooksItemId?: string | null;
   brand: { id: string; name: string; slug: string } | null;
   prices: ProductPrice[];
   inventory: { inStock: boolean; quantity: number | null } | null;

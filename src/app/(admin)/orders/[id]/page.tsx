@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { Order, OrderStatus } from '@/types/api';
 import { formatCents, formatDate, formatDateTime } from '@/lib/format';
 import { OrderStatusBadge } from '@/components/orders/order-status-badge';
+import { OrderQuickbooksSection } from '@/components/orders/order-quickbooks-section';
 import {
   Select,
   SelectContent,
@@ -295,6 +296,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
           </section>
+
+          {/* QuickBooks */}
+          <OrderQuickbooksSection order={order} />
 
           {/* Addresses */}
           {(billing || shipping) && (

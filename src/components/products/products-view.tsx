@@ -150,8 +150,20 @@ export function ProductsView() {
                       className="cursor-pointer"
                       onClick={() => setSelectedProduct(product)}
                     >
-                      <TableCell className="font-medium max-w-48 truncate">
-                        {product.name}
+                      <TableCell className="font-medium max-w-56">
+                        <div className="truncate">{product.name}</div>
+                        <div className="flex gap-1 mt-0.5">
+                          {!product.published && (
+                            <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                              Draft
+                            </Badge>
+                          )}
+                          {product.quickbooksItemId && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0">
+                              QBO
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {product.sku ?? '—'}

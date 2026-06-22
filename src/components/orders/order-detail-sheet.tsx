@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { Order, OrderStatus } from '@/types/api';
 import { formatCents, formatDate } from '@/lib/format';
 import { OrderStatusBadge } from './order-status-badge';
+import { OrderQuickbooksSection } from './order-quickbooks-section';
 import {
   Sheet,
   SheetContent,
@@ -183,6 +184,11 @@ export function OrderDetailSheet({ order, onClose }: Props) {
                 </div>
               )}
             </section>
+
+            {/* QuickBooks */}
+            <div className="mb-4">
+              <OrderQuickbooksSection order={order} />
+            </div>
 
             {/* Update status */}
             {nextOptions.length > 0 && (
