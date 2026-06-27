@@ -97,6 +97,32 @@ export interface ProductPrice {
   currency: string;
 }
 
+export type ProductBadgeKind =
+  | 'BEST_SELLER'
+  | 'BULK_SALE'
+  | 'SAVE_MORE'
+  | 'EOF_SALE'
+  | 'NEW'
+  | 'CLEARANCE'
+  | 'CUSTOM';
+
+export interface ProductBadge {
+  id: string;
+  label: string;
+  kind: ProductBadgeKind;
+  color: string | null;
+  priority: number;
+  isActive: boolean;
+  _count?: { products: number };
+}
+
+export interface ProductImage {
+  id: string;
+  url: string;
+  altText: string | null;
+  position: number;
+}
+
 export interface Product {
   id: string;
   sku: string | null;
@@ -111,12 +137,41 @@ export interface Product {
   prices: ProductPrice[];
   inventory: { inStock: boolean; quantity: number | null } | null;
   categories: { category: { id: string; name: string; slug: string } }[];
+  images?: ProductImage[];
 }
 
 export interface Brand {
   id: string;
   name: string;
   slug: string;
+}
+
+export interface CustomerRole {
+  id: string;
+  key: string;
+  name: string;
+}
+
+export interface ShippingMethod {
+  id: string;
+  name: string;
+  description: string | null;
+  rateCents: number;
+  freeThresholdCents: number | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export type WholesaleDiscountType = 'FIXED' | 'PERCENTAGE';
+
+export interface WholesaleRule {
+  id: string;
+  productId: string;
+  roleKey: string;
+  minQuantity: number;
+  discountType: WholesaleDiscountType;
+  amountCents: number | null;
+  percentageBps: number | null;
 }
 
 export interface Category {
@@ -153,10 +208,55 @@ export interface CreditApplication {
   userId: string;
   status: CreditApplicationStatus;
   registeredBusinessName: string;
+  soleTraderPartnershipName?: string | null;
   tradingName: string | null;
-  abn: string;
+  ownerName?: string;
+  dentistName?: string | null;
+  accountManagerName?: string | null;
+  orderAuthorizerName?: string | null;
+  proprietorNames?: string | null;
+
+  firstName?: string;
+  lastName?: string;
+  companyName?: string | null;
+  address1?: string;
+  address2?: string | null;
+  suburb?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+  postalAddress1?: string | null;
+  postalAddress2?: string | null;
+  postalSuburb?: string | null;
+  postalState?: string | null;
+  postalPostcode?: string | null;
   email: string;
   phone: string;
+
+  abn: string;
+  stateOfRegistration?: string;
+  businessEstablishedDuration?: string | null;
+  proprietorOwnershipDuration?: string | null;
+  businessActivity?: string | null;
+  businessType?: string | null;
+  businessTypeSpecify?: string | null;
+
+  tradeRef1Company?: string | null;
+  tradeRef1ContactPerson?: string | null;
+  tradeRef1Phone?: string | null;
+  tradeRef2Company?: string | null;
+  tradeRef2ContactPerson?: string | null;
+  tradeRef2Phone?: string | null;
+  tradeRef3Company?: string | null;
+  tradeRef3ContactPerson?: string | null;
+  tradeRef3Phone?: string | null;
+
+  signatureUrl?: string | null;
+  agreementAccepted?: boolean;
+  agreementAcceptedAt?: string | null;
+  agreementVersion?: string | null;
+
+  applicationDate?: string | null;
   submittedAt: string;
   reviewedAt: string | null;
   reviewedBy: string | null;
