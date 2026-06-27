@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format';
+import { LoginAsButton } from './login-as-button';
 
 export function CustomersView() {
   const router = useRouter();
@@ -66,13 +67,14 @@ export function CustomersView() {
               <TableHead>Roles</TableHead>
               <TableHead>Registered</TableHead>
               <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading
               ? Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -111,6 +113,9 @@ export function CustomersView() {
                       <Badge variant={customer.isActive ? 'default' : 'secondary'}>
                         {customer.isActive ? 'Active' : 'Inactive'}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <LoginAsButton customerId={customer.id} />
                     </TableCell>
                   </TableRow>
                 ))}

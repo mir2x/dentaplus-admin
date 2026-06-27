@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { QuickbooksRefreshCard } from '@/components/shared/quickbooks-refresh-card';
+import { LoginAsButton } from '@/components/customers/login-as-button';
 
 export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -113,9 +114,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           </div>
           <p className="text-sm text-muted-foreground">{c.email}</p>
         </div>
-        <Button variant={editing ? 'outline' : 'default'} onClick={() => setEditing((e) => !e)}>
-          {editing ? 'Done' : 'Edit'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <LoginAsButton customerId={c.id} variant="default" size="default" />
+          <Button variant={editing ? 'default' : 'outline'} onClick={() => setEditing((e) => !e)}>
+            {editing ? 'Done' : 'Edit'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
