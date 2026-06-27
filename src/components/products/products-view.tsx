@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Product, ProductType } from '@/types/api';
@@ -25,7 +26,6 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ProductEditSheet } from './product-edit-sheet';
 import { formatCents } from '@/lib/format';
 
 const TYPE_OPTIONS = [
@@ -57,11 +57,11 @@ function getCurrency(product: Product): string {
 
 export function ProductsView() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
   const [sku, setSku] = useState('');
   const [skuLoading, setSkuLoading] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   async function findBySku() {
     const value = sku.trim();
@@ -69,7 +69,7 @@ export function ProductsView() {
     setSkuLoading(true);
     try {
       const { data } = await api.get(`/admin/products/by-sku/${encodeURIComponent(value)}`);
-      setSelectedProduct(data);
+      router.push(`/products/${data.id}`);
       setSku('');
     } catch {
       toast.error(`No product found for SKU "${value}"`);
@@ -179,7 +179,7 @@ export function ProductsView() {
                     <TableRow
                       key={product.id}
                       className="cursor-pointer"
-                      onClick={() => setSelectedProduct(product)}
+                      onClick={() => router.push(`/products/${product.id}`)}
                     >
                       <TableCell className="font-medium max-w-56">
                         <div className="flex items-center gap-2">
@@ -272,11 +272,6 @@ export function ProductsView() {
           </TableBody>
         </Table>
       </div>
-
-      <ProductEditSheet
-        product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-      />
     </div>
   );
 }

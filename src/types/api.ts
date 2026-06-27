@@ -140,6 +140,88 @@ export interface Product {
   images?: ProductImage[];
 }
 
+export interface ProductVariantDetail {
+  id: string;
+  sku: string | null;
+  name: string | null;
+  regularCents: number | null;
+  saleCents: number | null;
+  stockQuantity: number | null;
+  isActive: boolean;
+  options: { attributeName: string; value: string }[];
+}
+
+/** Full product detail returned by GET /admin/products/:id (admin detail page). */
+export interface ProductDetail extends Product {
+  gtin: string | null;
+  description: string | null;
+  catalogVisibility: string | null;
+  requiresPrescription: boolean;
+  taxStatus: string | null;
+  taxClass: string | null;
+  legacyWooId: number | null;
+  weightKg: string | null;
+  lengthCm: string | null;
+  widthCm: string | null;
+  heightCm: string | null;
+  createdAt: string;
+  updatedAt: string;
+  inventory:
+    | {
+        inStock: boolean;
+        quantity: number | null;
+        lowStockAmount: number | null;
+        backordersAllowed: boolean;
+        soldIndividually: boolean;
+      }
+    | null;
+  tags: { tag: { id: string; name: string; slug: string } }[];
+  attributes: { name: string; values: string[]; visible: boolean; global: boolean }[];
+  variants: ProductVariantDetail[];
+  wholesaleRules: WholesaleRule[];
+  badges: { badge: ProductBadge }[];
+}
+
+/** Raw QuickBooks snapshots (on-demand refresh). */
+export interface QboItem {
+  Id: string;
+  Name?: string;
+  Sku?: string;
+  Description?: string;
+  UnitPrice?: number;
+  QtyOnHand?: number;
+  Type?: string;
+  Active?: boolean;
+}
+
+export interface QboCustomer {
+  Id: string;
+  DisplayName?: string;
+  CompanyName?: string;
+  Active?: boolean;
+  Balance?: number;
+  PrimaryEmailAddr?: { Address?: string };
+  PrimaryPhone?: { FreeFormNumber?: string };
+  BillAddr?: {
+    Line1?: string;
+    Line2?: string;
+    City?: string;
+    CountrySubDivisionCode?: string;
+    PostalCode?: string;
+    Country?: string;
+  };
+}
+
+export type QboProductSnapshot =
+  | { linked: false }
+  | { linked: true; connected: true; item: QboItem }
+  | { linked: true; connected: false; error: string };
+
+export type QboCustomerSnapshot =
+  | { linked: false }
+  | { linked: true; connected: true; customer: QboCustomer }
+  | { linked: true; connected: false; error: string };
+
 export interface Brand {
   id: string;
   name: string;
@@ -191,7 +273,29 @@ export interface Customer {
   isActive: boolean;
   registeredAt: string | null;
   roles: { role: { key: string; name: string } }[];
-  profile: { company: string | null; legacyOrderCount: number | null } | null;
+  profile: {
+    company: string | null;
+    legacyOrderCount: number | null;
+    nickname?: string | null;
+    notes?: string | null;
+  } | null;
+}
+
+export interface CustomerAddress {
+  id: string;
+  type: 'BILLING' | 'SHIPPING';
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  state: string | null;
+  postcode: string | null;
+  country: string | null;
+  isDefault: boolean;
 }
 
 export interface PaginatedResponse<T> {
@@ -335,7 +439,13 @@ export interface QuickbooksStatus {
 
 export interface Customer360 extends Customer {
   dentaplusId: string | null;
+  quickbooksCustomerId: string | null;
   creditAccountStatus: string;
+  username: string | null;
+  avatarUrl: string | null;
+  lastActiveAt: string | null;
+  createdAt: string;
+  addresses: CustomerAddress[];
   accountBalance: (AgingBuckets & { id: string }) | null;
   creditAccountApplications: {
     id: string;

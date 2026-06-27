@@ -1,0 +1,508 @@
+'use client';
+
+import { use, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { ArrowLeft, Check } from 'lucide-react';
+import { api } from '@/lib/api';
+import {
+  Brand,
+  ProductBadge,
+  ProductDetail,
+  ProductType,
+  QboProductSnapshot,
+} from '@/types/api';
+import { formatCents, formatDate } from '@/lib/format';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ProductImagesPanel } from '@/components/products/product-images-panel';
+import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel';
+import { QuickbooksRefreshCard } from '@/components/shared/quickbooks-refresh-card';
+
+const TYPE_OPTIONS: { value: ProductType; label: string }[] = [
+  { value: 'GENERAL', label: 'General' },
+  { value: 'MEDICINE', label: 'Medicine' },
+  { value: 'PRESCRIPTION_ONLY', label: 'Prescription Only' },
+  { value: 'EQUIPMENT', label: 'Equipment' },
+];
+
+export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+
+  const { data: product, isLoading } = useQuery<ProductDetail>({
+    queryKey: ['product', id],
+    queryFn: async () => (await api.get(`/admin/products/${id}`)).data,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full" />
+            ))}
+          </div>
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) return null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <button
+            onClick={() => router.push('/products')}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
+          >
+            <ArrowLeft className="size-3.5" /> All products
+          </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-xl font-semibold">{product.name}</h2>
+            {!product.published && <Badge variant="secondary">Draft</Badge>}
+            {product.featured && <Badge>Featured</Badge>}
+            {product.quickbooksItemId && <Badge variant="outline">QuickBooks-synced</Badge>}
+          </div>
+          <p className="text-sm text-muted-foreground">SKU {product.sku ?? '—'}</p>
+        </div>
+        {!editing && <Button onClick={() => setEditing(true)}>Edit</Button>}
+      </div>
+
+      {editing ? (
+        <ProductEditForm
+          product={product}
+          onDone={() => {
+            setEditing(false);
+            queryClient.invalidateQueries({ queryKey: ['product', id] });
+          }}
+        />
+      ) : (
+        <ProductView product={product} />
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────── View mode ─────────────────────────── */
+
+function ProductView({ product }: { product: ProductDetail }) {
+  const regular = product.prices.find((p) => p.type === 'REGULAR');
+  const sale = product.prices.find((p) => p.type === 'SALE');
+  const currency = product.prices[0]?.currency ?? 'AUD';
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-5">
+        <Section title="Identity">
+          <Row label="Name" value={product.name} />
+          <Row label="Slug" value={product.slug} />
+          <Row label="SKU" value={product.sku} />
+          <Row label="GTIN" value={product.gtin} />
+          <Row label="Type" value={product.type} />
+          <Row label="Brand" value={product.brand?.name} />
+          <Row label="Requires prescription" value={product.requiresPrescription ? 'Yes' : 'No'} />
+          <Row label="Catalog visibility" value={product.catalogVisibility} />
+        </Section>
+
+        <Section title="Pricing & inventory">
+          <Row label="Regular" value={regular ? formatCents(regular.amountCents, currency) : null} />
+          <Row label="Sale" value={sale ? formatCents(sale.amountCents, currency) : null} />
+          <Row label="In stock" value={product.inventory ? (product.inventory.inStock ? 'Yes' : 'No') : '—'} />
+          <Row label="Quantity" value={product.inventory?.quantity?.toString()} />
+          <Row label="Low-stock threshold" value={product.inventory?.lowStockAmount?.toString()} />
+          <Row label="Backorders allowed" value={product.inventory ? (product.inventory.backordersAllowed ? 'Yes' : 'No') : '—'} />
+        </Section>
+
+        <Section title="Descriptions">
+          <div className="space-y-2 text-sm">
+            <p className="text-muted-foreground">Short</p>
+            <p>{product.shortDescription || '—'}</p>
+            <p className="text-muted-foreground pt-2">Full</p>
+            <p className="whitespace-pre-wrap">{product.description || '—'}</p>
+          </div>
+        </Section>
+
+        <Section title="Dimensions">
+          <Row label="Weight (kg)" value={product.weightKg} />
+          <Row label="Length (cm)" value={product.lengthCm} />
+          <Row label="Width (cm)" value={product.widthCm} />
+          <Row label="Height (cm)" value={product.heightCm} />
+        </Section>
+
+        <Section title="Categories & tags">
+          <div className="flex flex-wrap gap-1.5">
+            {product.categories.length ? (
+              product.categories.map(({ category }) => (
+                <Badge key={category.id} variant="secondary">{category.name}</Badge>
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">No categories</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {product.tags.length ? (
+              product.tags.map(({ tag }) => (
+                <Badge key={tag.id} variant="outline">{tag.name}</Badge>
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">No tags</span>
+            )}
+          </div>
+        </Section>
+
+        {product.attributes.length > 0 && (
+          <Section title="Attributes">
+            {product.attributes.map((a) => (
+              <Row key={a.name} label={a.name} value={a.values.join(', ')} />
+            ))}
+          </Section>
+        )}
+
+        {product.variants.length > 0 && (
+          <Section title={`Variants (${product.variants.length})`}>
+            <div className="divide-y rounded-md border text-sm">
+              {product.variants.map((v) => (
+                <div key={v.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                  <span className="font-medium">
+                    {v.name || v.options.map((o) => o.value).join(' / ') || '—'}
+                    <span className="text-muted-foreground"> · {v.sku ?? 'no SKU'}</span>
+                  </span>
+                  <span>
+                    {v.saleCents != null
+                      ? formatCents(v.saleCents, currency)
+                      : v.regularCents != null
+                        ? formatCents(v.regularCents, currency)
+                        : '—'}
+                    <span className="text-muted-foreground"> · qty {v.stockQuantity ?? '—'}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+      </div>
+
+      <div className="space-y-5">
+        <Section title="Images">
+          {product.images?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {product.images.map((img) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={img.id} src={img.url} alt={img.altText ?? ''} className="size-20 rounded border object-cover" />
+              ))}
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">No images</span>
+          )}
+        </Section>
+
+        <Section title="Badges">
+          <div className="flex flex-wrap gap-1.5">
+            {product.badges.length ? (
+              product.badges.map(({ badge }) => (
+                <span
+                  key={badge.id}
+                  className="rounded-full px-2 py-0.5 text-xs text-white"
+                  style={{ backgroundColor: badge.color ?? '#2563eb' }}
+                >
+                  {badge.label}
+                </span>
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">No badges</span>
+            )}
+          </div>
+        </Section>
+
+        <Section title="Wholesale pricing">
+          {product.wholesaleRules.length ? (
+            <ul className="divide-y rounded-md border text-sm">
+              {product.wholesaleRules.map((r) => (
+                <li key={r.id} className="px-3 py-2">
+                  <span className="font-medium">{r.roleKey}</span>
+                  <span className="text-muted-foreground"> · {r.minQuantity}+ · </span>
+                  {r.discountType === 'PERCENTAGE'
+                    ? `${(r.percentageBps ?? 0) / 100}% off`
+                    : `${formatCents(r.amountCents ?? 0)} off/unit`}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="text-sm text-muted-foreground">No wholesale rules</span>
+          )}
+        </Section>
+
+        <QuickbooksRefreshCard<QboProductSnapshot>
+          endpoint={`/admin/products/${product.id}/quickbooks`}
+          queryKey={['product-qbo', product.id]}
+          render={(snap) => <QboItemView snap={snap} />}
+        />
+
+        <Section title="Meta">
+          <Row label="Created" value={formatDate(product.createdAt)} />
+          <Row label="Updated" value={formatDate(product.updatedAt)} />
+          <Row label="QuickBooks item ID" value={product.quickbooksItemId} />
+          <Row label="Legacy Woo ID" value={product.legacyWooId?.toString()} />
+        </Section>
+      </div>
+    </div>
+  );
+}
+
+function QboItemView({ snap }: { snap: QboProductSnapshot }) {
+  if (!snap.linked) return <p className="text-sm text-muted-foreground">Not linked to QuickBooks.</p>;
+  if (!snap.connected)
+    return <p className="text-sm text-destructive">Could not reach QuickBooks. {snap.error}</p>;
+  const i = snap.item;
+  return (
+    <div className="space-y-1.5 text-sm">
+      <Row label="Name" value={i.Name} />
+      <Row label="SKU" value={i.Sku} />
+      <Row label="Type" value={i.Type} />
+      <Row label="Unit price" value={i.UnitPrice != null ? `$${i.UnitPrice.toFixed(2)}` : null} />
+      <Row label="Qty on hand" value={i.QtyOnHand?.toString()} />
+      <Row label="Active" value={i.Active == null ? null : i.Active ? 'Yes' : 'No'} />
+    </div>
+  );
+}
+
+/* ─────────────────────────── Edit mode ─────────────────────────── */
+
+function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: () => void }) {
+  const queryClient = useQueryClient();
+  const isQbo = !!product.quickbooksItemId;
+  const currency = product.prices[0]?.currency ?? 'AUD';
+  const regular = product.prices.find((p) => p.type === 'REGULAR');
+  const sale = product.prices.find((p) => p.type === 'SALE');
+
+  const [name, setName] = useState(product.name);
+  const [sku, setSku] = useState(product.sku ?? '');
+  const [type, setType] = useState<ProductType>(product.type);
+  const [published, setPublished] = useState(product.published);
+  const [featured, setFeatured] = useState(product.featured);
+  const [shortDesc, setShortDesc] = useState(product.shortDescription ?? '');
+  const [description, setDescription] = useState(product.description ?? '');
+  const [brandId, setBrandId] = useState(product.brand?.id ?? '');
+  const [regularPrice, setRegularPrice] = useState(regular ? (regular.amountCents / 100).toFixed(2) : '');
+  const [salePrice, setSalePrice] = useState(sale ? (sale.amountCents / 100).toFixed(2) : '');
+  const [stock, setStock] = useState(product.inventory?.quantity?.toString() ?? '');
+
+  const [badgeIds, setBadgeIds] = useState<string[]>(product.badges.map((b) => b.badge.id));
+
+  const { data: brands } = useQuery<Brand[]>({
+    queryKey: ['brands'],
+    queryFn: async () => (await api.get('/admin/brands')).data,
+  });
+  const { data: allBadges } = useQuery<ProductBadge[]>({
+    queryKey: ['badges'],
+    queryFn: async () => (await api.get('/admin/badges')).data,
+  });
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const storefront = {
+        type,
+        published,
+        featured,
+        shortDescription: shortDesc || undefined,
+        description: description || undefined,
+        brandId: brandId || undefined,
+        salePrice: salePrice ? parseFloat(salePrice) : undefined,
+      };
+      const core = isQbo
+        ? {}
+        : {
+            name,
+            sku: sku || undefined,
+            regularPrice: regularPrice ? parseFloat(regularPrice) : undefined,
+            stockQuantity: stock !== '' ? parseInt(stock, 10) : undefined,
+          };
+      await api.patch(`/admin/products/${product.id}`, { ...storefront, ...core });
+      await api.put(`/admin/products/${product.id}/badges`, { badgeIds });
+    },
+    onSuccess: () => {
+      toast.success('Product saved');
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      onDone();
+    },
+    onError: () => toast.error('Failed to save product'),
+  });
+
+  const toggleBadge = (id: string) =>
+    setBadgeIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-5">
+        {isQbo && (
+          <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-3">
+            Name, SKU, price and stock are managed in QuickBooks and synced here. Edit the
+            storefront fields (type, brand, sale price, descriptions, visibility).
+          </p>
+        )}
+
+        <Section title="Identity">
+          <FieldRow label="Name">
+            <Input value={name} disabled={isQbo} onChange={(e) => setName(e.target.value)} />
+          </FieldRow>
+          <FieldRow label="SKU">
+            <Input value={sku} disabled={isQbo} onChange={(e) => setSku(e.target.value)} />
+          </FieldRow>
+          <FieldRow label="Type">
+            <Select value={type} onValueChange={(v) => setType((v ?? 'GENERAL') as ProductType)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TYPE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FieldRow>
+          <FieldRow label="Brand">
+            <Select value={brandId} onValueChange={(v) => setBrandId(v ?? '')}>
+              <SelectTrigger><SelectValue placeholder="No brand" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No brand</SelectItem>
+                {brands?.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FieldRow>
+        </Section>
+
+        <Section title="Pricing & inventory">
+          <div className="grid grid-cols-3 gap-3">
+            <FieldRow label={`Regular (${currency})`}>
+              <Input type="number" step="0.01" value={regularPrice} disabled={isQbo} onChange={(e) => setRegularPrice(e.target.value)} />
+            </FieldRow>
+            <FieldRow label={`Sale (${currency})`}>
+              <Input type="number" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Stock">
+              <Input type="number" value={stock} disabled={isQbo} onChange={(e) => setStock(e.target.value)} />
+            </FieldRow>
+          </div>
+        </Section>
+
+        <Section title="Descriptions">
+          <FieldRow label="Short description">
+            <Textarea rows={2} value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} />
+          </FieldRow>
+          <FieldRow label="Full description">
+            <Textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </FieldRow>
+        </Section>
+
+        <Section title="Visibility">
+          <div className="flex items-center justify-between">
+            <Label>Published</Label>
+            <Switch checked={published} onCheckedChange={setPublished} />
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <Label>Featured</Label>
+            <Switch checked={featured} onCheckedChange={setFeatured} />
+          </div>
+        </Section>
+
+        <div className="flex gap-2">
+          <Button disabled={save.isPending} onClick={() => save.mutate()}>
+            {save.isPending ? 'Saving…' : 'Save changes'}
+          </Button>
+          <Button variant="outline" onClick={onDone}>Cancel</Button>
+        </div>
+      </div>
+
+      <div className="space-y-5">
+        <Section title="Images">
+          <ProductImagesPanel productId={product.id} />
+        </Section>
+
+        <Section title="Badges / Stickers">
+          {allBadges?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {allBadges.map((b) => {
+                const active = badgeIds.includes(b.id);
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => toggleBadge(b.id)}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${
+                      active ? 'border-transparent text-white' : 'border-input text-muted-foreground hover:bg-muted'
+                    }`}
+                    style={active ? { backgroundColor: b.color ?? '#2563eb' } : undefined}
+                  >
+                    {active && <Check className="size-3" />}
+                    {b.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No badges defined yet — create them under Marketing → Badges.</p>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
+        </Section>
+
+        <Section title="Wholesale pricing">
+          <WholesaleRulesPanel productId={product.id} />
+        </Section>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── helpers ─────────────────────────── */
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg border p-4">
+      <p className="text-sm font-medium mb-3">{title}</p>
+      {children}
+    </section>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div className="flex justify-between gap-4 py-0.5 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-medium">{value || '—'}</span>
+    </div>
+  );
+}
+
+function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5 mb-3">
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}

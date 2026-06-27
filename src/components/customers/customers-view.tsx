@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Customer } from '@/types/api';
@@ -16,13 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CustomerDetailSheet } from './customer-detail-sheet';
 import { formatDate } from '@/lib/format';
 
 export function CustomersView() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [wholesaleOnly, setWholesaleOnly] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const { data: customers, isLoading } = useQuery<Customer[]>({
     queryKey: ['customers', search],
@@ -83,7 +83,7 @@ export function CustomersView() {
                   <TableRow
                     key={customer.id}
                     className="cursor-pointer"
-                    onClick={() => setSelectedCustomer(customer)}
+                    onClick={() => router.push(`/customers/${customer.id}`)}
                   >
                     <TableCell className="font-medium">
                       {customer.displayName ??
@@ -117,11 +117,6 @@ export function CustomersView() {
           </TableBody>
         </Table>
       </div>
-
-      <CustomerDetailSheet
-        customer={selectedCustomer}
-        onClose={() => setSelectedCustomer(null)}
-      />
     </div>
   );
 }

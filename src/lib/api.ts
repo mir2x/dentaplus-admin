@@ -5,6 +5,11 @@ const baseURL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1
 
 export const api = axios.create({ baseURL });
 
+// Interceptor-free client for the token refresh call. Using an axios instance
+// (rather than a hand-built URL) normalizes a trailing slash in baseURL so we
+// never hit `/api/v1//auth/refresh`, and avoids 401-interceptor recursion.
+const refreshClient = axios.create({ baseURL });
+
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -23,8 +28,7 @@ async function refreshAccessToken(): Promise<string> {
   const refreshToken = useAuthStore.getState().refreshToken;
   if (!refreshToken) throw new Error('No refresh token');
 
-  // Use a bare axios call (no interceptors) to avoid recursion.
-  const { data } = await axios.post(`${baseURL}/auth/refresh`, { refreshToken });
+  const { data } = await refreshClient.post('/auth/refresh', { refreshToken });
   useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
   return data.accessToken;
 }
