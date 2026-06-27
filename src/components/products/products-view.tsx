@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { ProductEditSheet } from './product-edit-sheet';
 import { formatCents } from '@/lib/format';
@@ -58,7 +59,24 @@ export function ProductsView() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
+  const [sku, setSku] = useState('');
+  const [skuLoading, setSkuLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  async function findBySku() {
+    const value = sku.trim();
+    if (!value) return;
+    setSkuLoading(true);
+    try {
+      const { data } = await api.get(`/admin/products/by-sku/${encodeURIComponent(value)}`);
+      setSelectedProduct(data);
+      setSku('');
+    } catch {
+      toast.error(`No product found for SKU "${value}"`);
+    } finally {
+      setSkuLoading(false);
+    }
+  }
 
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ['products', type],
@@ -111,6 +129,19 @@ export function ProductsView() {
             ))}
           </SelectContent>
         </Select>
+
+        <div className="ml-auto flex items-center gap-2">
+          <Input
+            placeholder="Open by exact SKU…"
+            value={sku}
+            onChange={(e) => setSku(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && findBySku()}
+            className="w-44"
+          />
+          <Button variant="outline" disabled={skuLoading || !sku.trim()} onClick={findBySku}>
+            {skuLoading ? 'Finding…' : 'Find'}
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-md border">
@@ -151,7 +182,19 @@ export function ProductsView() {
                       onClick={() => setSelectedProduct(product)}
                     >
                       <TableCell className="font-medium max-w-56">
-                        <div className="truncate">{product.name}</div>
+                        <div className="flex items-center gap-2">
+                          {product.images?.[0]?.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={product.images[0].url}
+                              alt=""
+                              className="size-8 shrink-0 rounded border object-cover"
+                            />
+                          ) : (
+                            <div className="size-8 shrink-0 rounded border bg-muted" />
+                          )}
+                          <div className="truncate">{product.name}</div>
+                        </div>
                         <div className="flex gap-1 mt-0.5">
                           {!product.published && (
                             <Badge variant="secondary" className="text-[10px] px-1 py-0">

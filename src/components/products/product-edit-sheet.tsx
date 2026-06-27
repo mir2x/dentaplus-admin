@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Product, Brand, ProductType } from '@/types/api';
+import { Product, Brand, ProductType, ProductBadge } from '@/types/api';
 import {
   Sheet,
   SheetContent,
@@ -25,6 +25,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { WholesaleRulesPanel } from './wholesale-rules-panel';
+import { ProductImagesPanel } from './product-images-panel';
 
 const TYPE_OPTIONS: { value: ProductType; label: string }[] = [
   { value: 'GENERAL', label: 'General' },
@@ -72,8 +74,27 @@ function ProductForm({ product, onClose }: { product: Product; onClose: () => vo
     queryFn: async () => (await api.get('/admin/brands')).data,
   });
 
+  const { data: allBadges } = useQuery<ProductBadge[]>({
+    queryKey: ['badges'],
+    queryFn: async () => (await api.get('/admin/badges')).data,
+  });
+  const { data: assignedBadges } = useQuery<ProductBadge[]>({
+    queryKey: ['product-badges', product.id],
+    queryFn: async () => (await api.get(`/admin/products/${product.id}/badges`)).data,
+  });
+
+  // null = untouched (fall back to the loaded assignments); array = explicit edit.
+  const [badgeIds, setBadgeIds] = useState<string[] | null>(null);
+  const selectedBadgeIds = badgeIds ?? assignedBadges?.map((b) => b.id) ?? [];
+  const toggleBadge = (id: string) =>
+    setBadgeIds(
+      selectedBadgeIds.includes(id)
+        ? selectedBadgeIds.filter((x) => x !== id)
+        : [...selectedBadgeIds, id],
+    );
+
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       // Storefront-only fields are always editable. QBO-owned fields are only
       // sent for non-QBO products so a sync never gets overwritten from here.
       const storefront = {
@@ -92,11 +113,15 @@ function ProductForm({ product, onClose }: { product: Product; onClose: () => vo
             regularPrice: regularPrice ? parseFloat(regularPrice) : undefined,
             stockQuantity: stock !== '' ? parseInt(stock, 10) : undefined,
           };
-      return api.patch(`/admin/products/${product.id}`, { ...storefront, ...core });
+      await api.patch(`/admin/products/${product.id}`, { ...storefront, ...core });
+      if (badgeIds !== null) {
+        await api.put(`/admin/products/${product.id}/badges`, { badgeIds });
+      }
     },
     onSuccess: () => {
       toast.success('Product saved');
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product-badges', product.id] });
       onClose();
     },
     onError: () => toast.error('Failed to save product'),
@@ -231,6 +256,46 @@ function ProductForm({ product, onClose }: { product: Product; onClose: () => vo
           </div>
           <Switch checked={featured} onCheckedChange={setFeatured} />
         </div>
+
+        <Separator />
+
+        <div className="space-y-2">
+          <Label>Badges / Stickers</Label>
+          {allBadges?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {allBadges.map((b) => {
+                const active = selectedBadgeIds.includes(b.id);
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => toggleBadge(b.id)}
+                    className={`rounded-full border px-2.5 py-1 text-xs transition ${
+                      active
+                        ? 'border-transparent text-white'
+                        : 'border-input text-muted-foreground hover:bg-muted'
+                    }`}
+                    style={active ? { backgroundColor: b.color ?? '#2563eb' } : undefined}
+                  >
+                    {b.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              No badges defined yet — create them under Marketing → Badges.
+            </p>
+          )}
+        </div>
+
+        <Separator />
+
+        <ProductImagesPanel productId={product.id} />
+
+        <Separator />
+
+        <WholesaleRulesPanel productId={product.id} />
 
         <Button className="w-full" disabled={save.isPending} onClick={() => save.mutate()}>
           {save.isPending ? 'Saving…' : 'Save Changes'}
