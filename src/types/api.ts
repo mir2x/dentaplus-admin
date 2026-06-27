@@ -398,7 +398,8 @@ export interface Offer {
   isActive: boolean;
   startsAt: string | null;
   endsAt: string | null;
-  product: { id: string; name: string } | null;
+  // Trigger products: empty array = a general offer that applies to the whole cart.
+  triggerProducts: { id: string; name: string; sku: string | null }[];
   freeProduct: { id: string; name: string } | null;
 }
 

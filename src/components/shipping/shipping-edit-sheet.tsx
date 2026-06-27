@@ -90,7 +90,7 @@ function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; o
         <SheetTitle>{isEdit ? `Edit ${editing.name}` : 'New shipping method'}</SheetTitle>
       </SheetHeader>
 
-      <div className="space-y-4">
+      <div className="space-y-4 px-4 pb-6">
         <Field label="Name">
           <Input value={name} placeholder="e.g. Standard" onChange={(e) => setName(e.target.value)} />
         </Field>

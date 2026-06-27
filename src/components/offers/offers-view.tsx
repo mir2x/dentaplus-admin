@@ -47,7 +47,7 @@ export function OffersView() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Product</TableHead>
+              <TableHead>Applies to</TableHead>
               <TableHead>Buy</TableHead>
               <TableHead>Reward</TableHead>
               <TableHead className="text-center">Status</TableHead>
@@ -69,7 +69,11 @@ export function OffersView() {
                 <TableRow key={o.id} className="cursor-pointer" onClick={() => setEditing(o)}>
                   <TableCell className="font-medium">{o.name}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {o.product?.name ?? '—'}
+                    {o.triggerProducts?.length
+                      ? o.triggerProducts.length === 1
+                        ? o.triggerProducts[0].name
+                        : `${o.triggerProducts.length} products`
+                      : 'General (whole cart)'}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{o.minQuantity}+</TableCell>
                   <TableCell className="text-sm">{describeReward(o)}</TableCell>

@@ -142,7 +142,7 @@ function ProductForm({ product, onClose }: { product: Product; onClose: () => vo
         </div>
       </SheetHeader>
 
-      <div className="space-y-4">
+      <div className="space-y-4 px-4 pb-6">
         {isQbo && (
           <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-2">
             Name, SKU, price and stock are managed in QuickBooks and synced here. Edit the

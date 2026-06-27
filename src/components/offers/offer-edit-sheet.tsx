@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { MultiProductSelect } from './multi-product-select';
 import {
   Select,
   SelectContent,
@@ -43,7 +44,7 @@ export function OfferEditSheet({ editing, onClose }: Props) {
 interface FormState {
   name: string;
   description: string;
-  productId: string;
+  productIds: string[];
   minQuantity: number;
   rewardType: OfferRewardType;
   discountAmountCents: string;
@@ -70,7 +71,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
       ? {
           name: editing.name,
           description: editing.description ?? '',
-          productId: editing.product?.id ?? '',
+          productIds: editing.triggerProducts?.map((p) => p.id) ?? [],
           minQuantity: editing.minQuantity,
           rewardType: editing.rewardType,
           discountAmountCents: editing.discountAmountCents != null ? String(editing.discountAmountCents) : '',
@@ -85,7 +86,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
       : {
           name: '',
           description: '',
-          productId: '',
+          productIds: [],
           minQuantity: 1,
           rewardType: 'FIXED_DISCOUNT',
           discountAmountCents: '',
@@ -104,7 +105,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
       const base = {
         name: form.name,
         description: form.description || undefined,
-        productId: form.productId,
+        productIds: form.productIds,
         minQuantity: form.minQuantity,
         rewardType: form.rewardType,
         isActive: form.isActive,
@@ -152,24 +153,20 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
         <SheetTitle>{isEdit ? `Edit ${editing.name}` : 'New offer'}</SheetTitle>
       </SheetHeader>
 
-      <div className="space-y-4">
+      <div className="space-y-4 px-4 pb-6">
         <Field label="Name">
           <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </Field>
 
-        <Field label="Trigger product">
-          <Select value={form.productId} onValueChange={(v) => setForm({ ...form, productId: v ?? '' })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a product" />
-            </SelectTrigger>
-            <SelectContent>
-              {products?.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Field label="Trigger products">
+          <MultiProductSelect
+            products={products ?? []}
+            selected={form.productIds}
+            onChange={(ids) => setForm({ ...form, productIds: ids })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Leave empty for a general offer that applies to the whole cart.
+          </p>
         </Field>
 
         <Field label="Minimum quantity to trigger">
@@ -286,7 +283,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
         <div className="flex gap-2 pt-2">
           <Button
             className="flex-1"
-            disabled={save.isPending || !form.name || !form.productId}
+            disabled={save.isPending || !form.name}
             onClick={() => save.mutate()}
           >
             {save.isPending ? 'Saving…' : isEdit ? 'Save' : 'Create'}

@@ -101,7 +101,7 @@ function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClos
         <SheetTitle>{isEdit ? `Edit ${editing.label}` : 'New badge'}</SheetTitle>
       </SheetHeader>
 
-      <div className="space-y-4">
+      <div className="space-y-4 px-4 pb-6">
         <div className="space-y-1.5">
           <Label>Label</Label>
           <Input
