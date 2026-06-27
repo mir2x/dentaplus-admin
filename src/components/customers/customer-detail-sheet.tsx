@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Customer, Customer360 } from '@/types/api';
+import { Customer, Customer360, CustomerRole } from '@/types/api';
 import { formatCents, formatDate } from '@/lib/format';
 import {
   Sheet,
@@ -16,6 +16,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { X } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface Props {
   customer: Customer | null;
@@ -42,6 +50,40 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
       onClose();
     },
     onError: () => toast.error('Failed to update customer'),
+  });
+
+  const { data: availableRoles } = useQuery<CustomerRole[]>({
+    queryKey: ['customer-roles'],
+    queryFn: async () => (await api.get('/admin/customer-roles')).data,
+    enabled: !!customer,
+  });
+
+  const currentRoles = (detail ?? customer)?.roles ?? [];
+  const hasWholesale = currentRoles.some((r) => r.role.key === 'wholesale_customer');
+
+  const refreshRoles = () => {
+    queryClient.invalidateQueries({ queryKey: ['customer-360', customer?.id] });
+    queryClient.invalidateQueries({ queryKey: ['customers'] });
+  };
+
+  const addRole = useMutation({
+    mutationFn: (roleKey: string) =>
+      api.post(`/admin/customers/${customer!.id}/roles`, { roleKey }),
+    onSuccess: () => {
+      toast.success('Role added');
+      refreshRoles();
+    },
+    onError: () => toast.error('Failed to add role'),
+  });
+
+  const removeRole = useMutation({
+    mutationFn: (roleKey: string) =>
+      api.delete(`/admin/customers/${customer!.id}/roles/${roleKey}`),
+    onSuccess: () => {
+      toast.success('Role removed');
+      refreshRoles();
+    },
+    onError: () => toast.error('Failed to remove role'),
   });
 
   const balance = detail?.accountBalance;
@@ -85,6 +127,54 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
               <Skeleton className="h-40 w-full" />
             ) : (
               <div className="space-y-5">
+                <Section title="Roles & wholesale">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {currentRoles.length ? (
+                      currentRoles.map(({ role }) => (
+                        <Badge key={role.key} variant="secondary" className="gap-1">
+                          {role.name}
+                          <button
+                            type="button"
+                            disabled={removeRole.isPending}
+                            onClick={() => removeRole.mutate(role.key)}
+                            className="hover:text-destructive"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No roles</span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    {!hasWholesale && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={addRole.isPending}
+                        onClick={() => addRole.mutate('wholesale_customer')}
+                      >
+                        Mark as wholesale
+                      </Button>
+                    )}
+                    <Select onValueChange={(v) => v && addRole.mutate(v as string)}>
+                      <SelectTrigger className="h-8 w-48">
+                        <SelectValue placeholder="Add role…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableRoles
+                          ?.filter((r) => !currentRoles.some((c) => c.role.key === r.key))
+                          .map((r) => (
+                            <SelectItem key={r.id} value={r.key}>
+                              {r.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </Section>
+
                 <Section title="Account balance">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Outstanding</span>

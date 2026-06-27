@@ -15,11 +15,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { CustomerDetailSheet } from './customer-detail-sheet';
 import { formatDate } from '@/lib/format';
 
 export function CustomersView() {
   const [search, setSearch] = useState('');
+  const [wholesaleOnly, setWholesaleOnly] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const { data: customers, isLoading } = useQuery<Customer[]>({
@@ -32,6 +34,10 @@ export function CustomersView() {
     },
   });
 
+  const visibleCustomers = wholesaleOnly
+    ? customers?.filter((c) => c.roles.some(({ role }) => role.key === 'wholesale_customer'))
+    : customers;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -41,6 +47,13 @@ export function CustomersView() {
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
         />
+        <Button
+          variant={wholesaleOnly ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setWholesaleOnly((v) => !v)}
+        >
+          Wholesale only
+        </Button>
       </div>
 
       <div className="rounded-md border">
@@ -66,7 +79,7 @@ export function CustomersView() {
                     ))}
                   </TableRow>
                 ))
-              : customers?.map((customer) => (
+              : visibleCustomers?.map((customer) => (
                   <TableRow
                     key={customer.id}
                     className="cursor-pointer"
