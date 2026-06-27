@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 const TITLES: { match: (p: string) => boolean; title: string }[] = [
   { match: (p) => p === '/dashboard', title: 'Dashboard' },
   { match: (p) => p.startsWith('/credit-applications'), title: 'Credit Applications' },
+  { match: (p) => p.startsWith('/invoices/'), title: 'Invoice Detail' },
   { match: (p) => p.startsWith('/invoices'), title: 'Invoices' },
   { match: (p) => p.startsWith('/statements'), title: 'Statements' },
   { match: (p) => p.startsWith('/accounts-receivable'), title: 'Accounts Receivable' },

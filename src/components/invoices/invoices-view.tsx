@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { AdminInvoice, InvoiceSyncStatus, PaginatedResponse } from '@/types/api';
@@ -37,6 +38,7 @@ const STATUS_VARIANT: Record<InvoiceSyncStatus, 'default' | 'secondary' | 'destr
 const STATUSES: InvoiceSyncStatus[] = ['DRAFT', 'OPEN', 'OVERDUE', 'PARTIAL', 'PAID', 'VOID'];
 
 export function InvoicesView() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
@@ -111,7 +113,11 @@ export function InvoicesView() {
               ))
             ) : data?.data.length ? (
               data.data.map((inv) => (
-                <TableRow key={inv.id}>
+                <TableRow
+                  key={inv.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/invoices/${inv.id}`)}
+                >
                   <TableCell className="font-medium">
                     {inv.invoiceNo}
                     {inv.type === 'CREDIT_NOTE' && (

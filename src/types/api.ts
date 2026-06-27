@@ -401,6 +401,73 @@ export interface AdminInvoice {
   };
 }
 
+interface QboRef {
+  value?: string;
+  name?: string;
+}
+interface QboAddr {
+  Line1?: string;
+  Line2?: string;
+  City?: string;
+  CountrySubDivisionCode?: string;
+  PostalCode?: string;
+  Country?: string;
+}
+export interface QboInvoiceLine {
+  Id?: string;
+  LineNum?: number;
+  Description?: string;
+  Amount?: number;
+  DetailType?: string;
+  SalesItemLineDetail?: {
+    ItemRef?: QboRef;
+    Qty?: number;
+    UnitPrice?: number;
+    TaxCodeRef?: QboRef;
+  };
+}
+export interface QboInvoice {
+  Id: string;
+  DocNumber?: string;
+  TxnDate?: string;
+  DueDate?: string;
+  CustomerRef?: QboRef;
+  BillEmail?: { Address?: string };
+  BillAddr?: QboAddr;
+  ShipAddr?: QboAddr;
+  SalesTermRef?: QboRef;
+  ShipMethodRef?: QboRef;
+  ShipDate?: string;
+  TrackingNum?: string;
+  CustomField?: { Name?: string; StringValue?: string }[];
+  Line?: QboInvoiceLine[];
+  TxnTaxDetail?: { TotalTax?: number };
+  TotalAmt?: number;
+  Balance?: number;
+  CustomerMemo?: { value?: string };
+  PrivateNote?: string;
+}
+
+export type QboInvoiceSnapshot =
+  | { linked: false }
+  | { linked: true; connected: true; invoice: QboInvoice | null; skuByItemRef: Record<string, string> }
+  | { linked: true; connected: false; error: string };
+
+export interface AdminInvoiceDetail extends AdminInvoice {
+  reference: string | null;
+  consignment: string | null;
+  subtotal: number;
+  tax: number;
+  currency: string;
+  paidAt: string | null;
+  notes: string | null;
+  payments: { amount: number; paidAt: string; source: string }[];
+  quickbooks: {
+    raw: QboInvoice | null;
+    syncedAt: string | null;
+  };
+}
+
 export interface Statement {
   id: string;
   statementNo: string;
