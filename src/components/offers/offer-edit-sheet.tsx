@@ -52,6 +52,8 @@ interface FormState {
   freeScope: FreeProductScope;
   freeProductId: string;
   isActive: boolean;
+  startsAt: string;
+  endsAt: string;
 }
 
 function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () => void }) {
@@ -77,6 +79,8 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           freeScope: editing.freeScope ?? 'SAME',
           freeProductId: editing.freeProduct?.id ?? '',
           isActive: editing.isActive,
+          startsAt: editing.startsAt ? editing.startsAt.slice(0, 10) : '',
+          endsAt: editing.endsAt ? editing.endsAt.slice(0, 10) : '',
         }
       : {
           name: '',
@@ -90,6 +94,8 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           freeScope: 'SAME',
           freeProductId: '',
           isActive: true,
+          startsAt: '',
+          endsAt: '',
         },
   );
 
@@ -102,6 +108,8 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
         minQuantity: form.minQuantity,
         rewardType: form.rewardType,
         isActive: form.isActive,
+        startsAt: form.startsAt || undefined,
+        endsAt: form.endsAt || undefined,
       };
       let reward: Record<string, unknown> = {};
       if (form.rewardType === 'FIXED_DISCOUNT') {
@@ -252,6 +260,23 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
             )}
           </>
         )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Starts (optional)">
+            <Input
+              type="date"
+              value={form.startsAt}
+              onChange={(e) => setForm({ ...form, startsAt: e.target.value })}
+            />
+          </Field>
+          <Field label="Ends (optional)">
+            <Input
+              type="date"
+              value={form.endsAt}
+              onChange={(e) => setForm({ ...form, endsAt: e.target.value })}
+            />
+          </Field>
+        </div>
 
         <div className="flex items-center justify-between">
           <Label>Active</Label>

@@ -114,6 +114,11 @@ export function OrderDetailSheet({ order, onClose }: Props) {
                   <div key={item.id} className="flex justify-between text-sm">
                     <span className="text-muted-foreground flex-1 pr-4">
                       {item.quantity}× {item.name}
+                      {item.sku && (
+                        <span className="block text-xs text-muted-foreground/70">
+                          SKU: {item.sku}
+                        </span>
+                      )}
                     </span>
                     <span className="font-medium">
                       {formatCents(item.totalCents, order.currency)}

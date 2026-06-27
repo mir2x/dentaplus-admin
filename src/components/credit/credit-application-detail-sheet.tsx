@@ -77,16 +77,101 @@ export function CreditApplicationDetailSheet({ applicationId, onClose }: Props) 
               </Badge>
             </SheetHeader>
 
-            <section className="space-y-1.5 text-sm mb-4">
-              <Row label="Trading name" value={app.tradingName ?? '—'} />
-              <Row label="ABN" value={app.abn} />
-              <Row label="Email" value={app.email} />
-              <Row label="Phone" value={app.phone} />
-              <Row label="Submitted" value={formatDate(app.submittedAt)} />
-              {app.reviewedAt && <Row label="Reviewed" value={formatDate(app.reviewedAt)} />}
-              {app.reviewedBy && <Row label="Reviewed by" value={app.reviewedBy} />}
-              {app.rejectionReason && <Row label="Reason" value={app.rejectionReason} />}
-            </section>
+            <div className="space-y-4 mb-4">
+              <Group title="Business">
+                <Row label="Registered name" value={app.registeredBusinessName} />
+                <Row label="Trading name" value={app.tradingName} />
+                <Row label="Sole trader / partnership" value={app.soleTraderPartnershipName} />
+                <Row label="Owner" value={app.ownerName} />
+                <Row label="Dentist" value={app.dentistName} />
+                <Row label="Account manager" value={app.accountManagerName} />
+                <Row label="Order authorizer" value={app.orderAuthorizerName} />
+                <Row label="Proprietor names" value={app.proprietorNames} />
+                <Row label="ABN" value={app.abn} />
+                <Row label="State of registration" value={app.stateOfRegistration} />
+                <Row label="Business established" value={app.businessEstablishedDuration} />
+                <Row label="Ownership duration" value={app.proprietorOwnershipDuration} />
+                <Row label="Business activity" value={app.businessActivity} />
+                <Row
+                  label="Business type"
+                  value={
+                    [app.businessType, app.businessTypeSpecify].filter(Boolean).join(' — ') || null
+                  }
+                />
+              </Group>
+
+              <Group title="Contact & delivery address">
+                <Row label="Contact" value={[app.firstName, app.lastName].filter(Boolean).join(' ') || null} />
+                <Row label="Company" value={app.companyName} />
+                <Row label="Email" value={app.email} />
+                <Row label="Phone" value={app.phone} />
+                <Row
+                  label="Address"
+                  value={
+                    [app.address1, app.address2, app.suburb, app.state, app.postcode, app.country]
+                      .filter(Boolean)
+                      .join(', ') || null
+                  }
+                />
+              </Group>
+
+              {(app.postalAddress1 || app.postalSuburb) && (
+                <Group title="Postal address">
+                  <Row
+                    label="Address"
+                    value={
+                      [
+                        app.postalAddress1,
+                        app.postalAddress2,
+                        app.postalSuburb,
+                        app.postalState,
+                        app.postalPostcode,
+                      ]
+                        .filter(Boolean)
+                        .join(', ') || null
+                    }
+                  />
+                </Group>
+              )}
+
+              <Group title="Trade references">
+                <Row label="Ref 1" value={tradeRef(app.tradeRef1Company, app.tradeRef1ContactPerson, app.tradeRef1Phone)} />
+                <Row label="Ref 2" value={tradeRef(app.tradeRef2Company, app.tradeRef2ContactPerson, app.tradeRef2Phone)} />
+                <Row label="Ref 3" value={tradeRef(app.tradeRef3Company, app.tradeRef3ContactPerson, app.tradeRef3Phone)} />
+              </Group>
+
+              <Group title="Agreement & signature">
+                <Row
+                  label="Agreement accepted"
+                  value={
+                    app.agreementAccepted
+                      ? `Yes${app.agreementAcceptedAt ? ` (${formatDate(app.agreementAcceptedAt)})` : ''}`
+                      : 'No'
+                  }
+                />
+                {app.applicationDate && <Row label="Date" value={formatDate(app.applicationDate)} />}
+                {app.signatureUrl ? (
+                  <div className="pt-1">
+                    <span className="text-muted-foreground text-sm">Signature</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={app.signatureUrl}
+                      alt="Applicant signature"
+                      className="mt-1 max-h-32 rounded border bg-white p-2"
+                    />
+                  </div>
+                ) : (
+                  <Row label="Signature" value={null} />
+                )}
+              </Group>
+
+              <Group title="Review">
+                <Row label="Submitted" value={formatDate(app.submittedAt)} />
+                {app.reviewedAt && <Row label="Reviewed" value={formatDate(app.reviewedAt)} />}
+                {app.reviewedBy && <Row label="Reviewed by" value={app.reviewedBy} />}
+                {app.rejectionReason && <Row label="Rejection reason" value={app.rejectionReason} />}
+              </Group>
+            </div>
 
             {app.status === 'PENDING' && (
               <>
@@ -145,11 +230,31 @@ export function CreditApplicationDetailSheet({ applicationId, onClose }: Props) 
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+        {title}
+      </p>
+      <div className="space-y-1.5 text-sm">{children}</div>
+    </section>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div className="flex justify-between gap-4">
       <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
+      <span className="text-right font-medium">{value || '—'}</span>
     </div>
   );
+}
+
+function tradeRef(
+  company?: string | null,
+  contact?: string | null,
+  phone?: string | null,
+): string | null {
+  const parts = [company, contact, phone].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
 }
