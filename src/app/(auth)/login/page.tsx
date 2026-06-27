@@ -29,7 +29,7 @@ export default function LoginPage() {
         toast.error('Access denied. Admin account required.');
         return;
       }
-      setAuth(data.accessToken, data.user);
+      setAuth(data.accessToken, data.refreshToken, data.user);
       router.replace('/dashboard');
     } catch {
       toast.error('Invalid email or password.');
