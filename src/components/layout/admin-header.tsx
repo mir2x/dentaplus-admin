@@ -18,10 +18,12 @@ const TITLES: { match: (p: string) => boolean; title: string }[] = [
   { match: (p) => p === '/customers', title: 'Customers' },
   { match: (p) => p.startsWith('/promo-codes'), title: 'Promo Codes' },
   { match: (p) => p.startsWith('/offers'), title: 'Offers' },
+  { match: (p) => p.startsWith('/badges'), title: 'Badges' },
   { match: (p) => p.startsWith('/blog'), title: 'Blog' },
   { match: (p) => p.startsWith('/faq'), title: 'FAQ' },
   { match: (p) => p.startsWith('/contact-messages'), title: 'Contact Messages' },
   { match: (p) => p.startsWith('/reviews'), title: 'Reviews' },
+  { match: (p) => p.startsWith('/shipping'), title: 'Shipping' },
   { match: (p) => p === '/settings', title: 'Settings' },
 ];
 

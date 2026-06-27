@@ -15,6 +15,8 @@ import {
   Users,
   Tag,
   Gift,
+  Sticker,
+  Truck,
   Newspaper,
   HelpCircle,
   Mail,
@@ -64,6 +66,7 @@ const navGroups = [
     items: [
       { href: '/promo-codes', label: 'Promo Codes', icon: Tag },
       { href: '/offers', label: 'Offers', icon: Gift },
+      { href: '/badges', label: 'Badges', icon: Sticker },
     ],
   },
   {
@@ -77,7 +80,10 @@ const navGroups = [
   },
   {
     label: 'Platform',
-    items: [{ href: '/settings', label: 'Settings', icon: Settings }],
+    items: [
+      { href: '/shipping', label: 'Shipping', icon: Truck },
+      { href: '/settings', label: 'Settings', icon: Settings },
+    ],
   },
 ];
 
