@@ -250,6 +250,10 @@ export interface ShippingMethod {
   id: string;
   name: string;
   description: string | null;
+  country: string;
+  state: string | null;
+  postcodes: string | null;
+  priority: number;
   rateCents: number;
   freeThresholdCents: number | null;
   isActive: boolean;

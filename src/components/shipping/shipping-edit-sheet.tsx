@@ -47,6 +47,9 @@ function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; o
 
   const [name, setName] = useState(isEdit ? editing.name : '');
   const [description, setDescription] = useState(isEdit ? (editing.description ?? '') : '');
+  const [state, setState] = useState(isEdit ? (editing.state ?? '') : '');
+  const [postcodes, setPostcodes] = useState(isEdit ? (editing.postcodes ?? '') : '');
+  const [priority, setPriority] = useState(isEdit ? String(editing.priority) : '0');
   const [rate, setRate] = useState(isEdit ? dollars(editing.rateCents) : '');
   const [freeOver, setFreeOver] = useState(isEdit ? dollars(editing.freeThresholdCents) : '');
   const [sortOrder, setSortOrder] = useState(isEdit ? String(editing.sortOrder) : '0');
@@ -57,6 +60,10 @@ function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; o
       const payload = {
         name,
         description: description || undefined,
+        country: 'AU',
+        state: state.trim() || undefined,
+        postcodes: postcodes.trim() || undefined,
+        priority: Number(priority) || 0,
         rateCents: Math.round(parseFloat(rate || '0') * 100),
         freeThresholdCents: freeOver ? Math.round(parseFloat(freeOver) * 100) : undefined,
         sortOrder: Number(sortOrder) || 0,
@@ -98,6 +105,26 @@ function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; o
         <Field label="Description (optional)">
           <Input value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
+
+        <div className="rounded-md bg-muted/40 p-3 space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Match the delivery address. Leave both blank for a whole-Australia zone. The most
+            specific matching zone (highest priority) wins.
+          </p>
+          <Field label="State (optional, e.g. NSW)">
+            <Input value={state} placeholder="Leave blank for any state" onChange={(e) => setState(e.target.value)} />
+          </Field>
+          <Field label="Postcodes (optional)">
+            <Input
+              value={postcodes}
+              placeholder="e.g. 2000-2234, 2555-2574"
+              onChange={(e) => setPostcodes(e.target.value)}
+            />
+          </Field>
+          <Field label="Priority (higher wins)">
+            <Input type="number" value={priority} onChange={(e) => setPriority(e.target.value)} />
+          </Field>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Rate ($)">
