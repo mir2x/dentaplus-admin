@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Upload, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Brand, ProductType } from '@/types/api';
 import { Button } from '@/components/ui/button';
@@ -40,11 +40,30 @@ export default function NewProductPage() {
   const [salePrice, setSalePrice] = useState('');
   const [published, setPublished] = useState(false);
   const [featured, setFeatured] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: brands } = useQuery<Brand[]>({
     queryKey: ['brands'],
     queryFn: async () => (await api.get('/admin/brands')).data,
   });
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('folder', 'products');
+      const { data } = await api.post('/admin/upload', form);
+      setImages((cur) => [...cur, data.url]);
+    } catch {
+      toast.error('Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
 
   const create = useMutation({
     mutationFn: async () => {
@@ -61,6 +80,10 @@ export default function NewProductPage() {
         published,
         featured,
       });
+      // Attach any images uploaded on this form now that the product exists.
+      for (let i = 0; i < images.length; i++) {
+        await api.post(`/admin/products/${data.id}/images`, { url: images[i], position: i });
+      }
       return data;
     },
     onSuccess: (data) => {
@@ -148,6 +171,41 @@ export default function NewProductPage() {
         <Field label="Full description">
           <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
+
+        <div className="space-y-2">
+          <Label>Images</Label>
+          {images.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {images.map((url, i) => (
+                <div key={url} className="group relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="size-20 rounded border object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setImages((cur) => cur.filter((_, idx) => idx !== i))}
+                    className="absolute -right-2 -top-2 rounded-full bg-destructive p-1 text-white opacity-0 transition group-hover:opacity-100"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleFile(f);
+            }}
+          />
+          <Button type="button" variant="secondary" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+            <Upload className="size-4" /> {uploading ? 'Uploading…' : 'Upload image'}
+          </Button>
+          <p className="text-xs text-muted-foreground">Attached to the product after it&apos;s created.</p>
+        </div>
 
         <div className="flex items-center justify-between">
           <Label>Published</Label>

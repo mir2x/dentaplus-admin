@@ -203,16 +203,7 @@ function ProductView({ product }: { product: ProductDetail }) {
 
       <div className="space-y-5">
         <Section title="Images">
-          {product.images?.length ? (
-            <div className="flex flex-wrap gap-2">
-              {product.images.map((img) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={img.id} src={img.url} alt={img.altText ?? ''} className="size-20 rounded border object-cover" />
-              ))}
-            </div>
-          ) : (
-            <span className="text-sm text-muted-foreground">No images</span>
-          )}
+          <ProductImagesPanel productId={product.id} />
         </Section>
 
         <Section title="Badges">
