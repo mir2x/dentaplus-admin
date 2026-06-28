@@ -142,17 +142,29 @@ export interface Product {
 
 export interface ProductVariantDetail {
   id: string;
+  productId?: string;
   sku: string | null;
   name: string | null;
   regularCents: number | null;
   saleCents: number | null;
   stockQuantity: number | null;
+  thumbnailUrl?: string | null;
+  quickbooksItemId?: string | null;
+  quickbooksSyncedAt?: string | null;
   isActive: boolean;
   options: { attributeName: string; value: string }[];
 }
 
+export interface Attribute {
+  id: string;
+  name: string;
+  description: string | null;
+  values: string[];
+}
+
 /** Full product detail returned by GET /admin/products/:id (admin detail page). */
 export interface ProductDetail extends Product {
+  hasVariant: boolean;
   gtin: string | null;
   description: string | null;
   catalogVisibility: string | null;
@@ -577,6 +589,8 @@ export interface Offer {
   endsAt: string | null;
   // Trigger products: empty array = a general offer that applies to the whole cart.
   triggerProducts: { id: string; name: string; sku: string | null }[];
+  // Trigger variants: fires only for these specific variants.
+  triggerVariants: { id: string; name: string | null; sku: string | null }[];
   freeProduct: { id: string; name: string } | null;
 }
 

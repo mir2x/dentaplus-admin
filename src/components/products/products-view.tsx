@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Product, ProductType } from '@/types/api';
@@ -140,6 +141,9 @@ export function ProductsView() {
           />
           <Button variant="outline" disabled={skuLoading || !sku.trim()} onClick={findBySku}>
             {skuLoading ? 'Finding…' : 'Find'}
+          </Button>
+          <Button onClick={() => router.push('/products/new')}>
+            <Plus className="size-4" /> New product
           </Button>
         </div>
       </div>

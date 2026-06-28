@@ -30,6 +30,8 @@ import {
 } from '@/components/ui/select';
 import { ProductImagesPanel } from '@/components/products/product-images-panel';
 import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel';
+import { VariantsManager } from '@/components/products/variants-manager';
+import { ProductOffersSection } from '@/components/products/product-offers-section';
 import { QuickbooksRefreshCard } from '@/components/shared/quickbooks-refresh-card';
 
 const TYPE_OPTIONS: { value: ProductType; label: string }[] = [
@@ -86,11 +88,22 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <h2 className="text-xl font-semibold">{product.name}</h2>
             {!product.published && <Badge variant="secondary">Draft</Badge>}
             {product.featured && <Badge>Featured</Badge>}
-            {product.quickbooksItemId && <Badge variant="outline">QuickBooks-synced</Badge>}
+            {product.hasVariant ? (
+              <Badge variant="outline">Variant product</Badge>
+            ) : (
+              product.quickbooksItemId && <Badge variant="outline">QuickBooks-synced</Badge>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground">SKU {product.sku ?? '—'}</p>
+          <p className="text-sm text-muted-foreground">
+            {product.hasVariant ? 'SKUs on variants' : `SKU ${product.sku ?? '—'}`}
+          </p>
         </div>
-        {!editing && <Button onClick={() => setEditing(true)}>Edit</Button>}
+        {!editing && (
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setEditing(true)}>Edit</Button>
+            <DeleteProductButton productId={product.id} />
+          </div>
+        )}
       </div>
 
       {editing ? (
@@ -183,28 +196,9 @@ function ProductView({ product }: { product: ProductDetail }) {
           </Section>
         )}
 
-        {product.variants.length > 0 && (
-          <Section title={`Variants (${product.variants.length})`}>
-            <div className="divide-y rounded-md border text-sm">
-              {product.variants.map((v) => (
-                <div key={v.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <span className="font-medium">
-                    {v.name || v.options.map((o) => o.value).join(' / ') || '—'}
-                    <span className="text-muted-foreground"> · {v.sku ?? 'no SKU'}</span>
-                  </span>
-                  <span>
-                    {v.saleCents != null
-                      ? formatCents(v.saleCents, currency)
-                      : v.regularCents != null
-                        ? formatCents(v.regularCents, currency)
-                        : '—'}
-                    <span className="text-muted-foreground"> · qty {v.stockQuantity ?? '—'}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
+        <VariantsManager productId={product.id} />
+
+        <ProductOffersSection productId={product.id} />
       </div>
 
       <div className="space-y-5">
@@ -370,9 +364,15 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           <FieldRow label="Name">
             <Input value={name} disabled={isQbo} onChange={(e) => setName(e.target.value)} />
           </FieldRow>
-          <FieldRow label="SKU">
-            <Input value={sku} disabled={isQbo} onChange={(e) => setSku(e.target.value)} />
-          </FieldRow>
+          {product.hasVariant ? (
+            <p className="text-xs text-muted-foreground mb-3">
+              This is a variant product — SKUs live on each variant (managed below).
+            </p>
+          ) : (
+            <FieldRow label="SKU">
+              <Input value={sku} disabled={isQbo} onChange={(e) => setSku(e.target.value)} />
+            </FieldRow>
+          )}
           <FieldRow label="Type">
             <Select value={type} onValueChange={(v) => setType((v ?? 'GENERAL') as ProductType)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -479,6 +479,34 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
 }
 
 /* ─────────────────────────── helpers ─────────────────────────── */
+
+function DeleteProductButton({ productId }: { productId: string }) {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const del = useMutation({
+    mutationFn: () => api.delete(`/admin/products/${productId}`),
+    onSuccess: () => {
+      toast.success('Product deleted');
+      router.push('/products');
+    },
+    onError: () => toast.error('Delete failed'),
+  });
+  if (!confirming) {
+    return (
+      <Button variant="outline" onClick={() => setConfirming(true)}>
+        Delete
+      </Button>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="destructive" disabled={del.isPending} onClick={() => del.mutate()}>
+        {del.isPending ? 'Deleting…' : 'Confirm delete'}
+      </Button>
+      <Button variant="ghost" onClick={() => setConfirming(false)}>Cancel</Button>
+    </div>
+  );
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
