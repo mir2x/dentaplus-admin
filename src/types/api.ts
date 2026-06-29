@@ -655,3 +655,62 @@ export interface DashboardSummary {
   inventory: { lowStock: number; outOfStock: number };
   accountsReceivable: { outstanding: number; aging: AgingBuckets };
 }
+
+export type DatePreset = 'today' | '7d' | '30d' | 'quarter' | 'ytd' | 'last_year';
+
+export interface AnalyticsSummary {
+  orderCount: number;
+  grossSales: number;
+  discounts: number;
+  netSales: number;
+  tax: number;
+  revenue: number;
+}
+
+export interface TrendPoint {
+  period: string;
+  grossSales: number;
+  netSales: number;
+  revenue: number;
+  orderCount: number;
+}
+
+export interface TopProduct {
+  productId: string | null;
+  name: string;
+  sku: string | null;
+  revenue: number;
+  quantitySold: number;
+}
+
+export interface TopVariant {
+  variantId: string | null;
+  name: string;
+  sku: string | null;
+  revenue: number;
+  quantitySold: number;
+}
+
+export interface TopCustomer {
+  customerId: string;
+  email: string | null;
+  displayName: string | null;
+  company: string | null;
+  isWholesale: boolean;
+  revenue: number;
+  orderCount: number;
+}
+
+export interface WholesaleCustomer extends TopCustomer {
+  discounts: number;
+}
+
+export interface CouponUsage {
+  promoCodeId: string;
+  code: string;
+  type: string | null;
+  value: number | null;
+  usageCount: number;
+  totalDiscount: number;
+  revenueWithCoupon: number;
+}

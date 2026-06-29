@@ -22,6 +22,7 @@ import {
   Mail,
   Star,
   Settings,
+  BarChart2,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -40,7 +41,10 @@ import { Button } from '@/components/ui/button';
 const navGroups = [
   {
     label: null,
-    items: [{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+    items: [
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/analytics', label: 'Analytics', icon: BarChart2 },
+    ],
   },
   {
     label: 'Operations',
