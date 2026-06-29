@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Upload, X } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Brand, ProductType } from '@/types/api';
+import { Brand, Category, ProductType } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,26 +27,71 @@ const TYPE_OPTIONS: { value: ProductType; label: string }[] = [
   { value: 'EQUIPMENT', label: 'Equipment' },
 ];
 
+const CATALOG_VISIBILITY_OPTIONS = [
+  { value: 'visible', label: 'Visible (catalog & search)' },
+  { value: 'catalog', label: 'Catalog only' },
+  { value: 'search', label: 'Search only' },
+  { value: 'hidden', label: 'Hidden' },
+];
+
+const TAX_STATUS_OPTIONS = [
+  { value: 'taxable', label: 'Taxable' },
+  { value: 'shipping', label: 'Shipping only' },
+  { value: 'none', label: 'None' },
+];
+
 export default function NewProductPage() {
   const router = useRouter();
+
+  // Core
   const [name, setName] = useState('');
   const [hasVariant, setHasVariant] = useState(false);
   const [sku, setSku] = useState('');
+  const [gtin, setGtin] = useState('');
   const [type, setType] = useState<ProductType>('GENERAL');
   const [brandId, setBrandId] = useState('');
-  const [shortDesc, setShortDesc] = useState('');
-  const [description, setDescription] = useState('');
+
+  // Pricing
   const [regularPrice, setRegularPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
+
+  // Descriptions
+  const [shortDesc, setShortDesc] = useState('');
+  const [description, setDescription] = useState('');
+
+  // Dimensions
+  const [weightKg, setWeightKg] = useState('');
+  const [lengthCm, setLengthCm] = useState('');
+  const [widthCm, setWidthCm] = useState('');
+  const [heightCm, setHeightCm] = useState('');
+
+  // Tax
+  const [taxStatus, setTaxStatus] = useState('taxable');
+  const [taxClass, setTaxClass] = useState('');
+
+  // Visibility & flags
   const [published, setPublished] = useState(false);
   const [featured, setFeatured] = useState(false);
+  const [catalogVisibility, setCatalogVisibility] = useState('visible');
+  const [requiresPrescription, setRequiresPrescription] = useState(false);
+  const [allowReviews, setAllowReviews] = useState(true);
+  const [position, setPosition] = useState('');
+
+  // Images
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+
   const { data: brands } = useQuery<Brand[]>({
     queryKey: ['brands'],
     queryFn: async () => (await api.get('/admin/brands')).data,
+  });
+
+  const { data: categories } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: async () => (await api.get('/admin/categories')).data,
   });
 
   async function handleFile(file: File) {
@@ -71,18 +116,31 @@ export default function NewProductPage() {
         name,
         hasVariant,
         sku: hasVariant ? undefined : sku || undefined,
+        gtin: gtin || undefined,
         type,
         brandId: brandId || undefined,
         shortDescription: shortDesc || undefined,
         description: description || undefined,
         regularPrice: regularPrice ? parseFloat(regularPrice) : 0,
         salePrice: salePrice ? parseFloat(salePrice) : undefined,
+        catalogVisibility,
+        taxStatus,
+        taxClass: taxClass || undefined,
+        requiresPrescription,
+        allowReviews,
+        position: position ? parseInt(position, 10) : undefined,
+        weightKg: weightKg ? parseFloat(weightKg) : undefined,
+        lengthCm: lengthCm ? parseFloat(lengthCm) : undefined,
+        widthCm: widthCm ? parseFloat(widthCm) : undefined,
+        heightCm: heightCm ? parseFloat(heightCm) : undefined,
         published,
         featured,
       });
-      // Attach any images uploaded on this form now that the product exists.
       for (let i = 0; i < images.length; i++) {
         await api.post(`/admin/products/${data.id}/images`, { url: images[i], position: i });
+      }
+      if (categoryIds.length > 0) {
+        await api.put(`/admin/products/${data.id}/categories`, { categoryIds });
       }
       return data;
     },
@@ -108,6 +166,7 @@ export default function NewProductPage() {
       </div>
 
       <div className="rounded-lg border p-4 space-y-4">
+        {/* ── Identity ── */}
         <Field label="Name">
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
@@ -129,6 +188,10 @@ export default function NewProductPage() {
             <Input value={sku} onChange={(e) => setSku(e.target.value)} />
           </Field>
         )}
+
+        <Field label="GTIN / EAN / Barcode">
+          <Input value={gtin} onChange={(e) => setGtin(e.target.value)} />
+        </Field>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Type">
@@ -154,6 +217,46 @@ export default function NewProductPage() {
           </Field>
         </div>
 
+        {/* ── Categories ── */}
+        <div className="space-y-1.5">
+          <Label>Categories</Label>
+          {categories?.length ? (
+            <div className="rounded-md border divide-y max-h-48 overflow-y-auto">
+              {categories.map((cat) => (
+                <div key={cat.id}>
+                  <CategoryRow
+                    id={cat.id}
+                    name={cat.name}
+                    selected={categoryIds.includes(cat.id)}
+                    onToggle={(id) =>
+                      setCategoryIds((cur) =>
+                        cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
+                      )
+                    }
+                  />
+                  {cat.children.map((child) => (
+                    <CategoryRow
+                      key={child.id}
+                      id={child.id}
+                      name={child.name}
+                      selected={categoryIds.includes(child.id)}
+                      indent
+                      onToggle={(id) =>
+                        setCategoryIds((cur) =>
+                          cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No categories found.</p>
+          )}
+        </div>
+
+        {/* ── Pricing ── */}
         {!hasVariant && (
           <div className="grid grid-cols-2 gap-3">
             <Field label="Regular price ($)">
@@ -165,6 +268,7 @@ export default function NewProductPage() {
           </div>
         )}
 
+        {/* ── Descriptions ── */}
         <Field label="Short description">
           <Textarea rows={2} value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} />
         </Field>
@@ -172,7 +276,47 @@ export default function NewProductPage() {
           <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
 
-        <div className="space-y-2">
+        {/* ── Dimensions ── */}
+        <div className="border-t pt-4">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Dimensions</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Weight (kg)">
+              <Input type="number" step="0.001" min="0" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
+            </Field>
+            <Field label="Length (cm)">
+              <Input type="number" step="0.1" min="0" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
+            </Field>
+            <Field label="Width (cm)">
+              <Input type="number" step="0.1" min="0" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} />
+            </Field>
+            <Field label="Height (cm)">
+              <Input type="number" step="0.1" min="0" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
+            </Field>
+          </div>
+        </div>
+
+        {/* ── Tax ── */}
+        <div className="border-t pt-4">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Tax</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Tax status">
+              <Select value={taxStatus} onValueChange={(v) => setTaxStatus(v ?? 'taxable')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TAX_STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Tax class">
+              <Input placeholder="e.g. standard" value={taxClass} onChange={(e) => setTaxClass(e.target.value)} />
+            </Field>
+          </div>
+        </div>
+
+        {/* ── Images ── */}
+        <div className="border-t pt-4 space-y-2">
           <Label>Images</Label>
           {images.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -207,13 +351,43 @@ export default function NewProductPage() {
           <p className="text-xs text-muted-foreground">Attached to the product after it&apos;s created.</p>
         </div>
 
-        <div className="flex items-center justify-between">
-          <Label>Published</Label>
-          <Switch checked={published} onCheckedChange={setPublished} />
-        </div>
-        <div className="flex items-center justify-between">
-          <Label>Featured</Label>
-          <Switch checked={featured} onCheckedChange={setFeatured} />
+        {/* ── Visibility & flags ── */}
+        <div className="border-t pt-4 space-y-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Visibility & flags</p>
+          <div className="flex items-center justify-between">
+            <Label>Published</Label>
+            <Switch checked={published} onCheckedChange={setPublished} />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Featured</Label>
+            <Switch checked={featured} onCheckedChange={setFeatured} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Requires prescription</Label>
+              <p className="text-xs text-muted-foreground">Customers must upload a script to purchase</p>
+            </div>
+            <Switch checked={requiresPrescription} onCheckedChange={setRequiresPrescription} />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Allow reviews</Label>
+            <Switch checked={allowReviews} onCheckedChange={setAllowReviews} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Catalog visibility">
+              <Select value={catalogVisibility} onValueChange={(v) => setCatalogVisibility(v ?? 'visible')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATALOG_VISIBILITY_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Sort position">
+              <Input type="number" min="0" step="1" placeholder="0" value={position} onChange={(e) => setPosition(e.target.value)} />
+            </Field>
+          </div>
         </div>
 
         <Button disabled={!canSave || create.isPending} onClick={() => create.mutate()}>
@@ -230,5 +404,33 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <Label>{label}</Label>
       {children}
     </div>
+  );
+}
+
+function CategoryRow({
+  id,
+  name,
+  selected,
+  indent = false,
+  onToggle,
+}: {
+  id: string;
+  name: string;
+  selected: boolean;
+  indent?: boolean;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <label
+      className={`flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/40 ${indent ? 'pl-7' : ''}`}
+    >
+      <input
+        type="checkbox"
+        className="accent-primary"
+        checked={selected}
+        onChange={() => onToggle(id)}
+      />
+      {name}
+    </label>
   );
 }

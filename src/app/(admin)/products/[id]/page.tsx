@@ -8,6 +8,7 @@ import { ArrowLeft, Check } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   Brand,
+  Category,
   ProductBadge,
   ProductDetail,
   ProductType,
@@ -39,6 +40,19 @@ const TYPE_OPTIONS: { value: ProductType; label: string }[] = [
   { value: 'MEDICINE', label: 'Medicine' },
   { value: 'PRESCRIPTION_ONLY', label: 'Prescription Only' },
   { value: 'EQUIPMENT', label: 'Equipment' },
+];
+
+const CATALOG_VISIBILITY_OPTIONS = [
+  { value: 'visible', label: 'Visible (catalog & search)' },
+  { value: 'catalog', label: 'Catalog only' },
+  { value: 'search', label: 'Search only' },
+  { value: 'hidden', label: 'Hidden' },
+];
+
+const TAX_STATUS_OPTIONS = [
+  { value: 'taxable', label: 'Taxable' },
+  { value: 'shipping', label: 'Shipping only' },
+  { value: 'none', label: 'None' },
 ];
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -138,8 +152,15 @@ function ProductView({ product }: { product: ProductDetail }) {
           <Row label="GTIN" value={product.gtin} />
           <Row label="Type" value={product.type} />
           <Row label="Brand" value={product.brand?.name} />
-          <Row label="Requires prescription" value={product.requiresPrescription ? 'Yes' : 'No'} />
+          <Row label="Position" value={product.position?.toString()} />
           <Row label="Catalog visibility" value={product.catalogVisibility} />
+          <Row label="Requires prescription" value={product.requiresPrescription ? 'Yes' : 'No'} />
+          <Row label="Allow reviews" value={product.allowReviews ? 'Yes' : 'No'} />
+        </Section>
+
+        <Section title="Tax">
+          <Row label="Tax status" value={product.taxStatus} />
+          <Row label="Tax class" value={product.taxClass} />
         </Section>
 
         <Section title="Pricing & inventory">
@@ -287,17 +308,31 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
 
   const [name, setName] = useState(product.name);
   const [sku, setSku] = useState(product.sku ?? '');
+  const [gtin, setGtin] = useState(product.gtin ?? '');
   const [type, setType] = useState<ProductType>(product.type);
   const [published, setPublished] = useState(product.published);
   const [featured, setFeatured] = useState(product.featured);
+  const [catalogVisibility, setCatalogVisibility] = useState(product.catalogVisibility ?? 'visible');
+  const [requiresPrescription, setRequiresPrescription] = useState(product.requiresPrescription);
+  const [allowReviews, setAllowReviews] = useState(product.allowReviews);
+  const [position, setPosition] = useState(product.position?.toString() ?? '');
   const [shortDesc, setShortDesc] = useState(product.shortDescription ?? '');
   const [description, setDescription] = useState(product.description ?? '');
   const [brandId, setBrandId] = useState(product.brand?.id ?? '');
   const [regularPrice, setRegularPrice] = useState(regular ? (regular.amountCents / 100).toFixed(2) : '');
   const [salePrice, setSalePrice] = useState(sale ? (sale.amountCents / 100).toFixed(2) : '');
   const [stock, setStock] = useState(product.inventory?.quantity?.toString() ?? '');
+  const [taxStatus, setTaxStatus] = useState(product.taxStatus ?? 'taxable');
+  const [taxClass, setTaxClass] = useState(product.taxClass ?? '');
+  const [weightKg, setWeightKg] = useState(product.weightKg ?? '');
+  const [lengthCm, setLengthCm] = useState(product.lengthCm ?? '');
+  const [widthCm, setWidthCm] = useState(product.widthCm ?? '');
+  const [heightCm, setHeightCm] = useState(product.heightCm ?? '');
 
   const [badgeIds, setBadgeIds] = useState<string[]>(product.badges.map((b) => b.badge.id));
+  const [categoryIds, setCategoryIds] = useState<string[]>(
+    product.categories.map((c) => c.category.id),
+  );
 
   const { data: brands } = useQuery<Brand[]>({
     queryKey: ['brands'],
@@ -307,6 +342,10 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
     queryKey: ['badges'],
     queryFn: async () => (await api.get('/admin/badges')).data,
   });
+  const { data: allCategories } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: async () => (await api.get('/admin/categories')).data,
+  });
 
   const save = useMutation({
     mutationFn: async () => {
@@ -314,10 +353,21 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
         type,
         published,
         featured,
+        gtin: gtin || undefined,
+        catalogVisibility,
+        requiresPrescription,
+        allowReviews,
+        position: position !== '' ? parseInt(position, 10) : undefined,
         shortDescription: shortDesc || undefined,
         description: description || undefined,
         brandId: brandId || undefined,
         salePrice: salePrice ? parseFloat(salePrice) : undefined,
+        taxStatus,
+        taxClass: taxClass || undefined,
+        weightKg: weightKg !== '' ? parseFloat(weightKg) : null,
+        lengthCm: lengthCm !== '' ? parseFloat(lengthCm) : null,
+        widthCm: widthCm !== '' ? parseFloat(widthCm) : null,
+        heightCm: heightCm !== '' ? parseFloat(heightCm) : null,
       };
       const core = isQbo
         ? {}
@@ -329,6 +379,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           };
       await api.patch(`/admin/products/${product.id}`, { ...storefront, ...core });
       await api.put(`/admin/products/${product.id}/badges`, { badgeIds });
+      await api.put(`/admin/products/${product.id}/categories`, { categoryIds });
     },
     onSuccess: () => {
       toast.success('Product saved');
@@ -340,6 +391,9 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
 
   const toggleBadge = (id: string) =>
     setBadgeIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+
+  const toggleCategory = (id: string) =>
+    setCategoryIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -364,27 +418,32 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
               <Input value={sku} disabled={isQbo} onChange={(e) => setSku(e.target.value)} />
             </FieldRow>
           )}
-          <FieldRow label="Type">
-            <Select value={type} onValueChange={(v) => setType((v ?? 'GENERAL') as ProductType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {TYPE_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <FieldRow label="GTIN / EAN / Barcode">
+            <Input value={gtin} onChange={(e) => setGtin(e.target.value)} />
           </FieldRow>
-          <FieldRow label="Brand">
-            <Select value={brandId} onValueChange={(v) => setBrandId(v ?? '')}>
-              <SelectTrigger><SelectValue placeholder="No brand" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No brand</SelectItem>
-                {brands?.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldRow>
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="Type">
+              <Select value={type} onValueChange={(v) => setType((v ?? 'GENERAL') as ProductType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TYPE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+            <FieldRow label="Brand">
+              <Select value={brandId} onValueChange={(v) => setBrandId(v ?? '')}>
+                <SelectTrigger><SelectValue placeholder="No brand" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No brand</SelectItem>
+                  {brands?.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+          </div>
         </Section>
 
         <Section title="Pricing & inventory">
@@ -410,6 +469,41 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           </FieldRow>
         </Section>
 
+        <Section title="Dimensions">
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="Weight (kg)">
+              <Input type="number" step="0.001" min="0" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Length (cm)">
+              <Input type="number" step="0.1" min="0" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Width (cm)">
+              <Input type="number" step="0.1" min="0" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Height (cm)">
+              <Input type="number" step="0.1" min="0" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
+            </FieldRow>
+          </div>
+        </Section>
+
+        <Section title="Tax">
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="Tax status">
+              <Select value={taxStatus} onValueChange={(v) => setTaxStatus(v ?? 'taxable')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TAX_STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+            <FieldRow label="Tax class">
+              <Input placeholder="e.g. standard" value={taxClass} onChange={(e) => setTaxClass(e.target.value)} />
+            </FieldRow>
+          </div>
+        </Section>
+
         <Section title="Visibility">
           <div className="flex items-center justify-between">
             <Label>Published</Label>
@@ -418,6 +512,32 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           <div className="flex items-center justify-between mt-2">
             <Label>Featured</Label>
             <Switch checked={featured} onCheckedChange={setFeatured} />
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <div>
+              <Label>Requires prescription</Label>
+              <p className="text-xs text-muted-foreground">Customers must upload a script to purchase</p>
+            </div>
+            <Switch checked={requiresPrescription} onCheckedChange={setRequiresPrescription} />
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <Label>Allow reviews</Label>
+            <Switch checked={allowReviews} onCheckedChange={setAllowReviews} />
+          </div>
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <FieldRow label="Catalog visibility">
+              <Select value={catalogVisibility} onValueChange={(v) => setCatalogVisibility(v ?? 'visible')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATALOG_VISIBILITY_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+            <FieldRow label="Sort position">
+              <Input type="number" min="0" step="1" value={position} onChange={(e) => setPosition(e.target.value)} />
+            </FieldRow>
           </div>
         </Section>
 
@@ -457,6 +577,36 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">No badges defined yet — create them under Marketing → Badges.</p>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
+        </Section>
+
+        <Section title="Categories">
+          {allCategories?.length ? (
+            <div className="rounded-md border divide-y max-h-56 overflow-y-auto">
+              {allCategories.map((cat) => (
+                <div key={cat.id}>
+                  <CategoryRow
+                    id={cat.id}
+                    name={cat.name}
+                    selected={categoryIds.includes(cat.id)}
+                    onToggle={toggleCategory}
+                  />
+                  {cat.children.map((child) => (
+                    <CategoryRow
+                      key={child.id}
+                      id={child.id}
+                      name={child.name}
+                      selected={categoryIds.includes(child.id)}
+                      indent
+                      onToggle={toggleCategory}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No categories defined.</p>
           )}
           <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
         </Section>
@@ -523,5 +673,33 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
       <Label>{label}</Label>
       {children}
     </div>
+  );
+}
+
+function CategoryRow({
+  id,
+  name,
+  selected,
+  indent = false,
+  onToggle,
+}: {
+  id: string;
+  name: string;
+  selected: boolean;
+  indent?: boolean;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <label
+      className={`flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/40 ${indent ? 'pl-7' : ''}`}
+    >
+      <input
+        type="checkbox"
+        className="accent-primary"
+        checked={selected}
+        onChange={() => onToggle(id)}
+      />
+      {name}
+    </label>
   );
 }

@@ -169,8 +169,10 @@ export interface ProductDetail extends Product {
   description: string | null;
   catalogVisibility: string | null;
   requiresPrescription: boolean;
+  allowReviews: boolean;
   taxStatus: string | null;
   taxClass: string | null;
+  position: number | null;
   legacyWooId: number | null;
   weightKg: string | null;
   lengthCm: string | null;
