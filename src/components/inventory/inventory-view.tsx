@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { PaginatedResponse } from '@/types/api';
 import {
   Table,
   TableBody,
@@ -21,6 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 
 interface InventoryRow {
   id: string;
@@ -35,14 +37,22 @@ interface InventoryRow {
   } | null;
 }
 
+const LIMIT = 25;
+
 export function InventoryView() {
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useQuery<InventoryRow[]>({
-    queryKey: ['inventory', filter, q],
+  function handleFilterChange(fn: () => void) {
+    fn();
+    setPage(1);
+  }
+
+  const { data: result, isLoading } = useQuery<PaginatedResponse<InventoryRow>>({
+    queryKey: ['inventory', filter, q, page],
     queryFn: async () => {
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
       if (filter !== 'all') params.filter = filter;
       if (q) params.q = q;
       return (await api.get('/admin/inventory', { params })).data;
@@ -55,10 +65,10 @@ export function InventoryView() {
         <Input
           placeholder="Search name or SKU…"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => handleFilterChange(() => setQ(e.target.value))}
           className="max-w-xs"
         />
-        <Select value={filter} onValueChange={(v) => setFilter(v ?? 'all')}>
+        <Select value={filter} onValueChange={(v) => handleFilterChange(() => setFilter(v ?? 'all'))}>
           <SelectTrigger className="w-44">
             <SelectValue />
           </SelectTrigger>
@@ -84,7 +94,7 @@ export function InventoryView() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              Array.from({ length: 8 }).map((_, i) => (
+              Array.from({ length: LIMIT }).map((_, i) => (
                 <TableRow key={i}>
                   {Array.from({ length: 5 }).map((_, j) => (
                     <TableCell key={j}>
@@ -93,8 +103,8 @@ export function InventoryView() {
                   ))}
                 </TableRow>
               ))
-            ) : data?.length ? (
-              data.map((row) => (
+            ) : result?.data.length ? (
+              result.data.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell className="font-medium">{row.product?.name ?? '—'}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">
@@ -122,6 +132,17 @@ export function InventoryView() {
             )}
           </TableBody>
         </Table>
+        {result && (
+          <div className="border-t px-3">
+            <PaginationControls
+              page={result.meta.page}
+              pages={result.meta.pages}
+              total={result.meta.total}
+              limit={result.meta.limit}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

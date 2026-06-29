@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Product, ProductType } from '@/types/api';
+import { PaginatedResponse, Product, ProductType } from '@/types/api';
 import {
   Table,
   TableBody,
@@ -28,6 +28,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { formatCents } from '@/lib/format';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 
 const TYPE_OPTIONS = [
   { value: 'all', label: 'All types' },
@@ -56,13 +57,21 @@ function getCurrency(product: Product): string {
   return product.prices[0]?.currency ?? 'AUD';
 }
 
+const LIMIT = 25;
+
 export function ProductsView() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
+  const [page, setPage] = useState(1);
   const [sku, setSku] = useState('');
   const [skuLoading, setSkuLoading] = useState(false);
+
+  function handleFilterChange(fn: () => void) {
+    fn();
+    setPage(1);
+  }
 
   async function findBySku() {
     const value = sku.trim();
@@ -79,13 +88,13 @@ export function ProductsView() {
     }
   }
 
-  const { data: products, isLoading } = useQuery<Product[]>({
-    queryKey: ['products', type],
+  const { data: result, isLoading } = useQuery<PaginatedResponse<Product>>({
+    queryKey: ['products', type, search, page],
     queryFn: async () => {
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
       if (type !== 'all') params.type = type;
-      const { data } = await api.get('/admin/products', { params });
-      return data;
+      if (search) params.q = search;
+      return (await api.get('/admin/products', { params })).data;
     },
   });
 
@@ -99,26 +108,16 @@ export function ProductsView() {
     onError: () => toast.error('Failed to update product'),
   });
 
-  const filtered = products?.filter((p) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(q) ||
-      (p.sku?.toLowerCase().includes(q) ?? false) ||
-      (p.brand?.name.toLowerCase().includes(q) ?? false)
-    );
-  });
-
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <Input
           placeholder="Search name, SKU or brand…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleFilterChange(() => setSearch(e.target.value))}
           className="max-w-xs"
         />
-        <Select value={type} onValueChange={(v) => setType(v ?? 'all')}>
+        <Select value={type} onValueChange={(v) => handleFilterChange(() => setType(v ?? 'all'))}>
           <SelectTrigger className="w-52">
             <SelectValue />
           </SelectTrigger>
@@ -173,7 +172,7 @@ export function ProductsView() {
                     ))}
                   </TableRow>
                 ))
-              : filtered?.map((product) => {
+              : result?.data.map((product) => {
                   const regular = getRegularPrice(product);
                   const sale = getSalePrice(product);
                   const currency = getCurrency(product);
@@ -275,6 +274,17 @@ export function ProductsView() {
                 })}
           </TableBody>
         </Table>
+        {result && (
+          <div className="border-t px-3">
+            <PaginationControls
+              page={result.meta.page}
+              pages={result.meta.pages}
+              total={result.meta.total}
+              limit={result.meta.limit}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

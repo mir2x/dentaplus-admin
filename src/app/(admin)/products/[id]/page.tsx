@@ -437,9 +437,13 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
                 <SelectTrigger><SelectValue placeholder="No brand" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">No brand</SelectItem>
-                  {brands?.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                  ))}
+                  {brands
+                    ? brands.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))
+                    : product.brand && (
+                        <SelectItem value={product.brand.id}>{product.brand.name}</SelectItem>
+                      )}
                 </SelectContent>
               </Select>
             </FieldRow>

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Customer } from '@/types/api';
+import { Customer, PaginatedResponse } from '@/types/api';
 import {
   Table,
   TableBody,
@@ -17,27 +17,35 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 import { formatDate } from '@/lib/format';
 import { LoginAsButton } from './login-as-button';
+
+const LIMIT = 25;
 
 export function CustomersView() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [wholesaleOnly, setWholesaleOnly] = useState(false);
+  const [page, setPage] = useState(1);
 
-  const { data: customers, isLoading } = useQuery<Customer[]>({
-    queryKey: ['customers', search],
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  const { data: result, isLoading } = useQuery<PaginatedResponse<Customer>>({
+    queryKey: ['customers', search, page],
     queryFn: async () => {
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
       if (search) params.q = search;
-      const { data } = await api.get('/admin/customers', { params });
-      return data;
+      return (await api.get('/admin/customers', { params })).data;
     },
   });
 
   const visibleCustomers = wholesaleOnly
-    ? customers?.filter((c) => c.roles.some(({ role }) => role.key === 'wholesale_customer'))
-    : customers;
+    ? result?.data.filter((c) => c.roles.some(({ role }) => role.key === 'wholesale_customer'))
+    : result?.data;
 
   return (
     <div className="space-y-4">
@@ -45,7 +53,7 @@ export function CustomersView() {
         <Input
           placeholder="Search name, email or company…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="max-w-xs"
         />
         <Button
@@ -72,7 +80,7 @@ export function CustomersView() {
           </TableHeader>
           <TableBody>
             {isLoading
-              ? Array.from({ length: 8 }).map((_, i) => (
+              ? Array.from({ length: LIMIT }).map((_, i) => (
                   <TableRow key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}>
@@ -121,6 +129,17 @@ export function CustomersView() {
                 ))}
           </TableBody>
         </Table>
+        {result && (
+          <div className="border-t px-3">
+            <PaginationControls
+              page={result.meta.page}
+              pages={result.meta.pages}
+              total={result.meta.total}
+              limit={result.meta.limit}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
