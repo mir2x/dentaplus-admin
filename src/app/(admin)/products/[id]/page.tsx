@@ -175,9 +175,13 @@ function ProductView({ product }: { product: ProductDetail }) {
         <Section title="Descriptions">
           <div className="space-y-2 text-sm">
             <p className="text-muted-foreground">Short</p>
-            <p>{product.shortDescription || '—'}</p>
+            {product.shortDescription
+              ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.shortDescription }} />
+              : <p>—</p>}
             <p className="text-muted-foreground pt-2">Full</p>
-            <p className="whitespace-pre-wrap">{product.description || '—'}</p>
+            {product.description
+              ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.description }} />
+              : <p>—</p>}
           </div>
         </Section>
 

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { ProductBadge, ProductBadgeKind } from '@/types/api';
@@ -15,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -173,6 +176,63 @@ function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClos
             </Button>
           )}
         </div>
+
+        {isEdit && <BadgeProducts badgeId={(editing as ProductBadge).id} />}
+      </div>
+    </>
+  );
+}
+
+function BadgeProducts({ badgeId }: { badgeId: string }) {
+  const queryClient = useQueryClient();
+
+  const { data: products, isLoading } = useQuery<
+    { id: string; name: string; sku: string | null; slug: string }[]
+  >({
+    queryKey: ['badge-products', badgeId],
+    queryFn: () => api.get(`/admin/badges/${badgeId}/products`).then((r) => r.data),
+  });
+
+  const detach = useMutation({
+    mutationFn: (productId: string) =>
+      api.delete(`/admin/products/${productId}/badges/${badgeId}`),
+    onSuccess: () => {
+      toast.success('Removed from product');
+      void queryClient.invalidateQueries({ queryKey: ['badge-products', badgeId] });
+      void queryClient.invalidateQueries({ queryKey: ['badges'] });
+    },
+    onError: () => toast.error('Failed to remove'),
+  });
+
+  return (
+    <>
+      <Separator className="my-4" />
+      <div className="space-y-2">
+        <p className="text-sm font-medium">
+          Attached products {products ? `(${products.length})` : ''}
+        </p>
+        {isLoading && (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-9 w-full" />)}
+          </div>
+        )}
+        {products?.length === 0 && (
+          <p className="text-sm text-muted-foreground">No products attached.</p>
+        )}
+        {products?.map((p) => (
+          <div key={p.id} className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm">
+            <span className="truncate font-medium">{p.name}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+              disabled={detach.isPending}
+              onClick={() => detach.mutate(p.id)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
       </div>
     </>
   );
