@@ -578,7 +578,7 @@ export interface PromoCode {
 }
 
 export type OfferRewardType = 'FIXED_DISCOUNT' | 'PERCENTAGE_DISCOUNT' | 'FREE_PRODUCT';
-export type FreeProductScope = 'SAME' | 'SPECIFIC';
+export type FreeProductScope = 'SAME' | 'SPECIFIC' | 'ANY';
 
 export interface Offer {
   id: string;

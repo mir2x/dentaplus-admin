@@ -61,7 +61,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
 
   const { data: products } = useQuery<Product[]>({
     queryKey: ['products-for-offers'],
-    queryFn: async () => (await api.get('/admin/products')).data,
+    queryFn: async () => (await api.get('/admin/products?limit=100')).data.data,
   });
 
   const [form, setForm] = useState<FormState>(() =>
@@ -221,7 +221,8 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="SAME">Same product</SelectItem>
-                  <SelectItem value="SPECIFIC">A specific product</SelectItem>
+                  <SelectItem value="SPECIFIC">A specific product (admin picks)</SelectItem>
+                  <SelectItem value="ANY">Customer's choice (any product)</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
