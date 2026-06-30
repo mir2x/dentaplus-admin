@@ -176,11 +176,11 @@ function ProductView({ product }: { product: ProductDetail }) {
           <div className="space-y-2 text-sm">
             <p className="text-muted-foreground">Short</p>
             {product.shortDescription
-              ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.shortDescription }} />
+              ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.shortDescription.replace(/\\n/g, '') }} />
               : <p>—</p>}
             <p className="text-muted-foreground pt-2">Full</p>
             {product.description
-              ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.description }} />
+              ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.description.replace(/\\n/g, '') }} />
               : <p>—</p>}
           </div>
         </Section>
