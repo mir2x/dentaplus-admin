@@ -53,15 +53,15 @@ export function CreditApplicationDetailSheet({ applicationId, onClose }: Props) 
 
   return (
     <Sheet open={!!applicationId} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent className="w-full overflow-y-auto p-0 sm:w-[44rem] sm:max-w-[calc(100vw-2rem)]">
         {isLoading || !app ? (
-          <div className="space-y-3 p-2">
+          <div className="space-y-3 p-6 pr-14">
             <Skeleton className="h-6 w-48" />
             <Skeleton className="h-32 w-full" />
           </div>
         ) : (
           <>
-            <SheetHeader className="mb-4">
+            <SheetHeader className="px-6 pb-2 pt-6 pr-14">
               <SheetTitle>{app.registeredBusinessName}</SheetTitle>
               <Badge
                 className="w-fit"
@@ -77,7 +77,7 @@ export function CreditApplicationDetailSheet({ applicationId, onClose }: Props) 
               </Badge>
             </SheetHeader>
 
-            <div className="space-y-4 mb-4">
+            <div className="space-y-5 px-6 pb-6">
               <Group title="Business">
                 <Row label="Registered name" value={app.registeredBusinessName} />
                 <Row label="Trading name" value={app.tradingName} />
@@ -157,7 +157,7 @@ export function CreditApplicationDetailSheet({ applicationId, onClose }: Props) 
                     <img
                       src={app.signatureUrl}
                       alt="Applicant signature"
-                      className="mt-1 max-h-32 rounded border bg-white p-2"
+                      className="mt-1 max-h-32 max-w-full rounded border bg-white p-2"
                     />
                   </div>
                 ) : (
@@ -177,7 +177,7 @@ export function CreditApplicationDetailSheet({ applicationId, onClose }: Props) 
               <>
                 <Separator className="mb-4" />
                 {!rejecting ? (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 px-6 pb-6">
                     <Button
                       className="flex-1"
                       disabled={review.isPending}
@@ -194,7 +194,7 @@ export function CreditApplicationDetailSheet({ applicationId, onClose }: Props) 
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 px-6 pb-6">
                     <Textarea
                       placeholder="Reason for rejection (optional)"
                       value={reason}
@@ -233,19 +233,21 @@ export function CreditApplicationDetailSheet({ applicationId, onClose }: Props) 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
       </p>
-      <div className="space-y-1.5 text-sm">{children}</div>
+      <div className="space-y-2 text-sm">{children}</div>
     </section>
   );
 }
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
   return (
-    <div className="flex justify-between gap-4">
+    <div className="grid grid-cols-[minmax(9rem,14rem)_minmax(0,1fr)] gap-4">
       <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value || '—'}</span>
+      <span className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">
+        {value || '—'}
+      </span>
     </div>
   );
 }
