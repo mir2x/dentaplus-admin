@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -166,21 +166,9 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           />
         </Field>
 
-        <Field label="Reward type">
-          <Select
-            value={form.rewardType}
-            onValueChange={(v) => setForm({ ...form, rewardType: (v as OfferRewardType) ?? 'FIXED_DISCOUNT' })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="FIXED_DISCOUNT">Fixed discount</SelectItem>
-              <SelectItem value="PERCENTAGE_DISCOUNT">Percentage discount</SelectItem>
-              <SelectItem value="FREE_PRODUCT">Free product</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
+        {form.rewardType !== 'FREE_PRODUCT' && (
+          <RewardTypeField form={form} setForm={setForm} />
+        )}
 
         {form.rewardType === 'FIXED_DISCOUNT' && (
           <Field label="Discount amount (cents)">
@@ -204,25 +192,28 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
 
         {form.rewardType === 'FREE_PRODUCT' && (
           <>
-            <Field label="Free quantity">
-              <Input
-                type="number"
-                value={form.freeQty}
-                onChange={(e) => setForm({ ...form, freeQty: e.target.value })}
-              />
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <RewardTypeField form={form} setForm={setForm} />
+              <Field label="Free quantity">
+                <Input
+                  type="number"
+                  value={form.freeQty}
+                  onChange={(e) => setForm({ ...form, freeQty: e.target.value })}
+                />
+              </Field>
+            </div>
             <Field label="Free product scope">
               <Select
                 value={form.freeScope}
                 onValueChange={(v) => setForm({ ...form, freeScope: (v as FreeProductScope) ?? 'SAME' })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="SAME">Same product</SelectItem>
                   <SelectItem value="SPECIFIC">A specific product (admin picks)</SelectItem>
-                  <SelectItem value="ANY">Customer's choice (any product)</SelectItem>
+                  <SelectItem value="ANY">Customer&apos;s choice (any product)</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -232,7 +223,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
                   value={form.freeProductId}
                   onValueChange={(v) => setForm({ ...form, freeProductId: v ?? '' })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a product" />
                   </SelectTrigger>
                   <SelectContent>
@@ -286,6 +277,34 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
         </div>
       </div>
     </>
+  );
+}
+
+function RewardTypeField({
+  form,
+  setForm,
+}: {
+  form: FormState;
+  setForm: Dispatch<SetStateAction<FormState>>;
+}) {
+  return (
+    <Field label="Reward type">
+      <Select
+        value={form.rewardType}
+        onValueChange={(v) =>
+          setForm({ ...form, rewardType: (v as OfferRewardType) ?? 'FIXED_DISCOUNT' })
+        }
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="FIXED_DISCOUNT">Fixed discount</SelectItem>
+          <SelectItem value="PERCENTAGE_DISCOUNT">Percentage discount</SelectItem>
+          <SelectItem value="FREE_PRODUCT">Free product</SelectItem>
+        </SelectContent>
+      </Select>
+    </Field>
   );
 }
 
