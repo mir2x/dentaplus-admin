@@ -169,6 +169,7 @@ export function CreditApplicationDetailSheet({ applicationId, onClose }: Props) 
                 <Row label="Submitted" value={formatDate(app.submittedAt)} />
                 {app.reviewedAt && <Row label="Reviewed" value={formatDate(app.reviewedAt)} />}
                 {app.reviewedBy && <Row label="Reviewed by" value={app.reviewedBy} />}
+                {app.user?.dentaplusId && <Row label="DentaPlus ID" value={app.user.dentaplusId} />}
                 {app.rejectionReason && <Row label="Rejection reason" value={app.rejectionReason} />}
               </Group>
             </div>
