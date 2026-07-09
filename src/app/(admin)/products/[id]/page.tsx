@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ProductImagesPanel } from '@/components/products/product-images-panel';
+import { ProductBadgeImagesPanel } from '@/components/products/product-badge-images-panel';
 import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel';
 import { VariantsManager } from '@/components/products/variants-manager';
 import { ProductOffersSection } from '@/components/products/product-offers-section';
@@ -232,16 +233,21 @@ function ProductView({ product }: { product: ProductDetail }) {
         </Section>
 
         <Section title="Badges">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {product.badges.length ? (
-              product.badges.map(({ badge }) => (
-                <span
-                  key={badge.id}
-                  className="rounded-full px-2 py-0.5 text-xs text-white"
-                  style={{ backgroundColor: badge.color ?? '#2563eb' }}
-                >
-                  {badge.label}
-                </span>
+              product.badges.map(({ badge, imageUrl }) => (
+                <div key={badge.id} className="flex items-center gap-1.5">
+                  {imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={imageUrl} alt={badge.label} className="size-6 rounded object-cover" />
+                  )}
+                  <span
+                    className="rounded-full px-2 py-0.5 text-xs text-white"
+                    style={{ backgroundColor: badge.color ?? '#2563eb' }}
+                  >
+                    {badge.label}
+                  </span>
+                </div>
               ))
             ) : (
               <span className="text-sm text-muted-foreground">No badges</span>
@@ -587,6 +593,10 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             <p className="text-xs text-muted-foreground">No badges defined yet — create them under Marketing → Badges.</p>
           )}
           <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
+
+          <div className="mt-3 border-t pt-3">
+            <ProductBadgeImagesPanel productId={product.id} />
+          </div>
         </Section>
 
         <Section title="Categories">

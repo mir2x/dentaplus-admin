@@ -123,6 +123,11 @@ export interface ProductImage {
   position: number;
 }
 
+/** A badge assigned to a specific product, with that product's own badge image (if uploaded). */
+export interface ProductBadgeAssignment extends ProductBadge {
+  imageUrl: string | null;
+}
+
 export interface Product {
   id: string;
   sku: string | null;
@@ -193,7 +198,7 @@ export interface ProductDetail extends Product {
   attributes: { name: string; values: string[]; visible: boolean; global: boolean }[];
   variants: ProductVariantDetail[];
   wholesaleRules: WholesaleRule[];
-  badges: { badge: ProductBadge }[];
+  badges: { badge: ProductBadge; imageUrl: string | null }[];
 }
 
 /** Raw QuickBooks snapshots (on-demand refresh). */
