@@ -16,6 +16,7 @@ import {
   Tag,
   Gift,
   Sticker,
+  Image,
   Truck,
   Newspaper,
   HelpCircle,
@@ -71,6 +72,7 @@ const navGroups = [
       { href: '/promo-codes', label: 'Promo Codes', icon: Tag },
       { href: '/offers', label: 'Offers', icon: Gift },
       { href: '/badges', label: 'Badges', icon: Sticker },
+      { href: '/banners', label: 'Banners', icon: Image },
     ],
   },
   {

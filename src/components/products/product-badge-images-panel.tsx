@@ -10,9 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
 /**
- * Manages per-product images for already-assigned badges. Assignment
- * membership itself is toggled elsewhere (Badges / Stickers panel) and must
- * be saved before an image can be uploaded for a newly-added badge.
+ * Manages per-product images for assigned badges. Assignment membership is
+ * toggled (and persisted immediately) in the Badges / Stickers panel above.
  */
 export function ProductBadgeImagesPanel({ productId }: { productId: string }) {
   const queryClient = useQueryClient();
@@ -38,7 +37,7 @@ export function ProductBadgeImagesPanel({ productId }: { productId: string }) {
   if (!assignments?.length) {
     return (
       <p className="text-xs text-muted-foreground">
-        No badges assigned yet — assign badges above and save first.
+        No badges assigned yet — select a badge above.
       </p>
     );
   }

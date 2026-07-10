@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select';
 import { ProductImagesPanel } from '@/components/products/product-images-panel';
 import { ProductBadgeImagesPanel } from '@/components/products/product-badge-images-panel';
+import { ProductBannerPanel } from '@/components/products/product-banner-panel';
 import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel';
 import { VariantsManager } from '@/components/products/variants-manager';
 import { ProductOffersSection } from '@/components/products/product-offers-section';
@@ -232,6 +233,10 @@ function ProductView({ product }: { product: ProductDetail }) {
           <ProductImagesPanel productId={product.id} />
         </Section>
 
+        <Section title="Banner">
+          <ProductBannerPanel productId={product.id} />
+        </Section>
+
         <Section title="Badges">
           <div className="flex flex-wrap gap-2">
             {product.badges.length ? (
@@ -388,7 +393,6 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             stockQuantity: stock !== '' ? parseInt(stock, 10) : undefined,
           };
       await api.patch(`/admin/products/${product.id}`, { ...storefront, ...core });
-      await api.put(`/admin/products/${product.id}/badges`, { badgeIds });
       await api.put(`/admin/products/${product.id}/categories`, { categoryIds });
     },
     onSuccess: () => {
@@ -399,8 +403,23 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
     onError: () => toast.error('Failed to save product'),
   });
 
+  const toggleBadgeMutation = useMutation({
+    mutationFn: (next: string[]) => api.put(`/admin/products/${product.id}/badges`, { badgeIds: next }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-badges', product.id] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: () => toast.error('Failed to update badges'),
+  });
+
+  // Badge membership is applied immediately (unlike the rest of the form) so an
+  // assignment row exists right away for ProductBadgeImagesPanel to attach an image to.
   const toggleBadge = (id: string) =>
-    setBadgeIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+    setBadgeIds((cur) => {
+      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+      toggleBadgeMutation.mutate(next);
+      return next;
+    });
 
   const toggleCategory = (id: string) =>
     setCategoryIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
@@ -568,6 +587,10 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           <ProductImagesPanel productId={product.id} />
         </Section>
 
+        <Section title="Banner">
+          <ProductBannerPanel productId={product.id} />
+        </Section>
+
         <Section title="Badges / Stickers">
           {allBadges?.length ? (
             <div className="flex flex-wrap gap-2">
@@ -592,7 +615,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           ) : (
             <p className="text-xs text-muted-foreground">No badges defined yet — create them under Marketing → Badges.</p>
           )}
-          <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Applied immediately.</p>
 
           <div className="mt-3 border-t pt-3">
             <ProductBadgeImagesPanel productId={product.id} />

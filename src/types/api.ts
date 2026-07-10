@@ -128,6 +128,16 @@ export interface ProductBadgeAssignment extends ProductBadge {
   imageUrl: string | null;
 }
 
+export interface Banner {
+  id: string;
+  productId: string | null;
+  imageUrl: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  product: { id: string; name: string; slug: string } | null;
+}
+
 export interface Product {
   id: string;
   sku: string | null;
