@@ -9,6 +9,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const EMAIL_EXPORT_RANGES = [
+  { value: 'day', label: 'Last day' },
+  { value: 'week', label: 'Last week' },
+  { value: 'month', label: 'Last month' },
+  { value: 'year', label: 'Last year' },
+  { value: 'all', label: 'All time' },
+] as const;
 
 interface Settings {
   gstDivisor: number;
@@ -31,6 +46,8 @@ export function SettingsView() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [emailRange, setEmailRange] = useState<(typeof EMAIL_EXPORT_RANGES)[number]['value']>('month');
+  const [exportingEmails, setExportingEmails] = useState(false);
   // Edits overlay the fetched values, so we never copy server state into an effect.
   const [edits, setEdits] = useState<Partial<Settings>>({});
 
@@ -67,6 +84,26 @@ export function SettingsView() {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  async function handleExportEmails() {
+    setExportingEmails(true);
+    try {
+      const res = await api.get('/admin/settings/export-emails', {
+        params: { range: emailRange },
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(res.data as Blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `emails-${emailRange}-${new Date().toISOString().slice(0, 10)}.txt`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to export emails');
+    } finally {
+      setExportingEmails(false);
     }
   }
 
@@ -128,6 +165,34 @@ export function SettingsView() {
           <Button disabled={save.isPending} onClick={() => save.mutate(merged)}>
             {save.isPending ? 'Saving…' : 'Save settings'}
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Export emails</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Download a .txt file of unique emails collected from user accounts and contact-us submissions.
+          </p>
+          <div className="flex items-center gap-3">
+            <Select value={emailRange} onValueChange={(v) => v && setEmailRange(v as typeof emailRange)}>
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EMAIL_EXPORT_RANGES.map(({ value, label }) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleExportEmails} disabled={exportingEmails}>
+              {exportingEmails ? 'Exporting…' : 'Download .txt'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
