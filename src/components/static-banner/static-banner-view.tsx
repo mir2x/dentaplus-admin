@@ -45,7 +45,9 @@ export function StaticBannerView() {
     try {
       const form = new FormData();
       form.append('file', file);
-      form.append('folder', 'static-banner');
+      // Reuses the "banners" S3 prefix — that's the one already public-readable
+      // in the bucket policy; "static-banner" isn't allowlisted there.
+      form.append('folder', 'banners');
       const { data: uploaded } = await api.post('/admin/upload', form);
       setImages([...currentImages, uploaded.url]);
     } catch {
