@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Upload, X } from 'lucide-react';
+import { GripVertical, Plus, Trash2, Upload } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,18 +11,32 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface StaticBanner {
-  quantity: number;
-  images: string[];
+interface StaticBannerSlide {
+  imageUrl: string;
+  alt: string;
+  title: string;
+  ctaLabel: string;
+  ctaHref: string;
 }
+
+interface StaticBanner {
+  slides: StaticBannerSlide[];
+}
+
+const EMPTY_SLIDE: StaticBannerSlide = {
+  imageUrl: '',
+  alt: '',
+  title: '',
+  ctaLabel: '',
+  ctaHref: '',
+};
 
 export function StaticBannerView() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   // Edits overlay the fetched values, so we never copy server state into an effect.
-  const [quantity, setQuantity] = useState<number | null>(null);
-  const [images, setImages] = useState<string[] | null>(null);
+  const [slides, setSlides] = useState<StaticBannerSlide[] | null>(null);
 
   const { data, isLoading } = useQuery<StaticBanner>({
     queryKey: ['static-banner'],
@@ -33,12 +47,24 @@ export function StaticBannerView() {
     mutationFn: (body: StaticBanner) => api.patch('/admin/static-banner', body),
     onSuccess: () => {
       toast.success('Static banner saved');
-      setQuantity(null);
-      setImages(null);
+      setSlides(null);
       queryClient.invalidateQueries({ queryKey: ['static-banner'] });
     },
     onError: () => toast.error('Failed to save static banner'),
   });
+
+  if (isLoading || !data) return <Skeleton className="h-72 w-full max-w-2xl" />;
+
+  const currentSlides = slides ?? data.slides;
+  const incomplete = currentSlides.some((s) => !s.imageUrl);
+
+  function updateSlide(index: number, patch: Partial<StaticBannerSlide>) {
+    setSlides(currentSlides.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+  }
+
+  function removeSlide(index: number) {
+    setSlides(currentSlides.filter((_, i) => i !== index));
+  }
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -49,7 +75,7 @@ export function StaticBannerView() {
       // in the bucket policy; "static-banner" isn't allowlisted there.
       form.append('folder', 'banners');
       const { data: uploaded } = await api.post('/admin/upload', form);
-      setImages([...currentImages, uploaded.url]);
+      setSlides([...currentSlides, { ...EMPTY_SLIDE, imageUrl: uploaded.url }]);
     } catch {
       toast.error('Upload failed');
     } finally {
@@ -58,60 +84,86 @@ export function StaticBannerView() {
     }
   }
 
-  if (isLoading || !data) return <Skeleton className="h-72 w-full max-w-xl" />;
-
-  const currentQuantity = quantity ?? data.quantity;
-  const currentImages = images ?? data.images;
-  const mismatch = currentImages.length !== currentQuantity;
-
-  function removeImage(index: number) {
-    setImages(currentImages.filter((_, i) => i !== index));
-  }
-
   return (
-    <div className="max-w-xl">
+    <div className="max-w-2xl">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Static Banner</CardTitle>
+          <CardTitle className="text-base">Static Banner (Hero Carousel)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="quantity">Quantity</Label>
-            <Input
-              id="quantity"
-              type="number"
-              min={0}
-              value={currentQuantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-            />
-            <p className="text-xs text-muted-foreground">Number of images this banner should display</p>
-          </div>
-
-          <div className="space-y-1.5 pt-2 border-t">
-            <Label>Images ({currentImages.length})</Label>
-            <div className="grid grid-cols-3 gap-3">
-              {currentImages.map((url, i) => (
-                <div key={i} className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="h-20 w-full rounded border object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    className="absolute -top-2 -right-2 rounded-full bg-destructive text-destructive-foreground p-0.5"
-                  >
-                    <X className="size-3.5" />
-                  </button>
+          <div className="space-y-4">
+            {currentSlides.map((slide, i) => (
+              <div key={i} className="flex gap-3 rounded border p-3">
+                <div className="flex flex-col items-center gap-2 pt-1 text-muted-foreground">
+                  <GripVertical className="size-4" />
+                  <span className="text-xs">{i + 1}</span>
                 </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="flex h-20 w-full items-center justify-center rounded border border-dashed text-muted-foreground hover:bg-muted"
-              >
-                {uploading ? 'Uploading…' : <Plus className="size-5" />}
-              </button>
-            </div>
+
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={slide.imageUrl}
+                  alt=""
+                  className="h-24 w-32 shrink-0 rounded border object-cover"
+                />
+
+                <div className="grid flex-1 grid-cols-2 gap-2">
+                  <div className="col-span-2 space-y-1">
+                    <Label>Title</Label>
+                    <Input
+                      value={slide.title}
+                      onChange={(e) => updateSlide(i, { title: e.target.value })}
+                      placeholder="Professional Dental Supplies for Modern Practices"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>CTA label</Label>
+                    <Input
+                      value={slide.ctaLabel}
+                      onChange={(e) => updateSlide(i, { ctaLabel: e.target.value })}
+                      placeholder="Shop Now"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>CTA link</Label>
+                    <Input
+                      value={slide.ctaHref}
+                      onChange={(e) => updateSlide(i, { ctaHref: e.target.value })}
+                      placeholder="/shop"
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    <Label>Image alt text</Label>
+                    <Input
+                      value={slide.alt}
+                      onChange={(e) => updateSlide(i, { alt: e.target.value })}
+                      placeholder="Dental instruments held by a gloved hand"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive"
+                  onClick={() => removeSlide(i)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="flex h-16 w-full items-center justify-center gap-2 rounded border border-dashed text-muted-foreground hover:bg-muted"
+            >
+              {uploading ? 'Uploading…' : (
+                <>
+                  <Plus className="size-4" /> Add slide
+                </>
+              )}
+            </button>
             <input
               ref={fileRef}
               type="file"
@@ -123,15 +175,13 @@ export function StaticBannerView() {
             />
           </div>
 
-          {mismatch && (
-            <p className="text-xs text-destructive">
-              Image count ({currentImages.length}) must match quantity ({currentQuantity}) before saving.
-            </p>
+          {incomplete && (
+            <p className="text-xs text-destructive">Every slide needs an image before saving.</p>
           )}
 
           <Button
-            disabled={save.isPending || mismatch}
-            onClick={() => save.mutate({ quantity: currentQuantity, images: currentImages })}
+            disabled={save.isPending || incomplete}
+            onClick={() => save.mutate({ slides: currentSlides })}
           >
             <Upload className="size-4" />
             {save.isPending ? 'Saving…' : 'Save'}
