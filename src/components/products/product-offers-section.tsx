@@ -122,8 +122,15 @@ export function ProductOffersSection({ productId }: { productId: string }) {
             <li key={o.id} className="px-3 py-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="min-w-0">
-                  <span className="font-medium">{o.name}</span>
-                  <span className="text-muted-foreground"> · {describeAttachment(o)}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium">{o.name}</span>
+                    <span className="text-muted-foreground"> · {describeAttachment(o)}</span>
+                  </div>
+                  {(o.startsAt || o.endsAt) && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {o.startsAt ? new Date(o.startsAt).toLocaleDateString() : 'Now'} – {o.endsAt ? new Date(o.endsAt).toLocaleDateString() : 'Ongoing'}
+                    </div>
+                  )}
                 </span>
                 <Button
                   variant="ghost"

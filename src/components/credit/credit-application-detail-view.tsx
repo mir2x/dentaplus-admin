@@ -59,10 +59,8 @@ export function CreditApplicationDetailView({ applicationId }: Props) {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/credit-applications">
-            <ChevronLeft className="h-5 w-5" />
-          </Link>
+        <Button variant="ghost" size="icon" onClick={() => router.push('/credit-applications')}>
+          <ChevronLeft className="h-5 w-5" />
         </Button>
         <h1 className="text-2xl font-bold tracking-tight">{app.registeredBusinessName}</h1>
         <Badge
