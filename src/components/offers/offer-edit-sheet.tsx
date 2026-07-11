@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Offer, OfferRewardType, FreeProductScope, Product } from '@/types/api';
+import { Offer, OfferRewardType, FreeProductScope } from '@/types/api';
 import {
   Sheet,
   SheetContent,
@@ -49,7 +49,6 @@ interface FormState {
   discountBps: string;
   freeQty: string;
   freeScope: FreeProductScope;
-  freeProductId: string;
   isActive: boolean;
   startsAt: string;
   endsAt: string;
@@ -58,11 +57,6 @@ interface FormState {
 function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () => void }) {
   const queryClient = useQueryClient();
   const isEdit = editing !== 'new';
-
-  const { data: products } = useQuery<Product[]>({
-    queryKey: ['products-for-offers'],
-    queryFn: async () => (await api.get('/admin/products?limit=100')).data.data,
-  });
 
   const [form, setForm] = useState<FormState>(() =>
     isEdit
@@ -75,7 +69,6 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           discountBps: editing.discountBps != null ? String(editing.discountBps) : '',
           freeQty: editing.freeQty != null ? String(editing.freeQty) : '1',
           freeScope: editing.freeScope ?? 'SAME',
-          freeProductId: editing.freeProduct?.id ?? '',
           isActive: editing.isActive,
           startsAt: editing.startsAt ? editing.startsAt.slice(0, 10) : '',
           endsAt: editing.endsAt ? editing.endsAt.slice(0, 10) : '',
@@ -89,7 +82,6 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           discountBps: '',
           freeQty: '1',
           freeScope: 'SAME',
-          freeProductId: '',
           isActive: true,
           startsAt: '',
           endsAt: '',
@@ -113,10 +105,11 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
       } else if (form.rewardType === 'PERCENTAGE_DISCOUNT') {
         reward = { discountBps: Number(form.discountBps) };
       } else {
+        // freeVariants (SPECIFIC) is curated separately, on the product/variant
+        // detail page, once a trigger with variants is attached.
         reward = {
           freeQty: Number(form.freeQty),
           freeScope: form.freeScope,
-          ...(form.freeScope === 'SPECIFIC' ? { freeProductId: form.freeProductId } : {}),
         };
       }
       const payload = { ...base, ...reward };
@@ -211,30 +204,18 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SAME">Same product</SelectItem>
-                  <SelectItem value="SPECIFIC">A specific product (admin picks)</SelectItem>
-                  <SelectItem value="ANY">Customer&apos;s choice (any product)</SelectItem>
+                  <SelectItem value="SAME">Same product/variant purchased</SelectItem>
+                  <SelectItem value="ANY_VARIANT">Customer&apos;s choice (any variant of the trigger product)</SelectItem>
+                  <SelectItem value="SPECIFIC">Admin choice (one or more variants of the trigger product)</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
-            {form.freeScope === 'SPECIFIC' && (
-              <Field label="Free product">
-                <Select
-                  value={form.freeProductId}
-                  onValueChange={(v) => setForm({ ...form, freeProductId: v ?? '' })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products?.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+            {(form.freeScope === 'ANY_VARIANT' || form.freeScope === 'SPECIFIC') && (
+              <p className="text-xs text-muted-foreground rounded-md bg-muted/40 p-2">
+                {form.freeScope === 'SPECIFIC'
+                  ? 'Attach a trigger product with variants, then choose which of its variants are free from that product’s detail page.'
+                  : 'Requires a trigger product that has variants — attach one from that product’s detail page.'}
+              </p>
             )}
           </>
         )}

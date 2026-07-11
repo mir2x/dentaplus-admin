@@ -593,7 +593,10 @@ export interface PromoCode {
 }
 
 export type OfferRewardType = 'FIXED_DISCOUNT' | 'PERCENTAGE_DISCOUNT' | 'FREE_PRODUCT';
-export type FreeProductScope = 'SAME' | 'SPECIFIC' | 'ANY';
+// SAME: exact item purchased. ANY_VARIANT: customer picks any variant of the
+// trigger product. SPECIFIC: admin-curated variant pool (freeVariants).
+// Both ANY_VARIANT and SPECIFIC require the trigger product to have variants.
+export type FreeProductScope = 'SAME' | 'SPECIFIC' | 'ANY_VARIANT';
 
 export interface Offer {
   id: string;
@@ -611,8 +614,10 @@ export interface Offer {
   // Trigger products: empty array = a general offer that applies to the whole cart.
   triggerProducts: { id: string; name: string; sku: string | null }[];
   // Trigger variants: fires only for these specific variants.
-  triggerVariants: { id: string; name: string | null; sku: string | null }[];
-  freeProduct: { id: string; name: string } | null;
+  triggerVariants: { id: string; name: string | null; sku: string | null; productId: string | null }[];
+  // SPECIFIC's admin-curated free-variant pool. One entry auto-adds; two or
+  // more prompt the customer to choose. Unused for SAME/ANY_VARIANT.
+  freeVariants: { id: string; name: string | null; sku: string | null; productId: string }[];
 }
 
 // ── Content & support ─────────────────────────────────────────────────────────

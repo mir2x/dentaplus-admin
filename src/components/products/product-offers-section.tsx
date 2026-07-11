@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 import { toast } from 'sonner';
 import { Check, X } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -16,6 +17,15 @@ import {
 } from '@/components/ui/select';
 
 const uniq = (a: string[]) => [...new Set(a)];
+
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof AxiosError) {
+    const message = err.response?.data?.message;
+    if (typeof message === 'string') return message;
+    if (Array.isArray(message)) return message.join(', ');
+  }
+  return fallback;
+}
 
 export function ProductOffersSection({ productId }: { productId: string }) {
   const queryClient = useQueryClient();
@@ -64,7 +74,7 @@ export function ProductOffersSection({ productId }: { productId: string }) {
       setPicked([]);
       refresh();
     },
-    onError: () => toast.error('Could not attach offer'),
+    onError: (err) => toast.error(errorMessage(err, 'Could not attach offer')),
   });
 
   const detach = useMutation({
@@ -95,6 +105,13 @@ export function ProductOffersSection({ productId }: { productId: string }) {
   const togglePick = (id: string) =>
     setPicked((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
+  const setFreeVariants = useMutation({
+    mutationFn: ({ offerId: id, freeVariantIds }: { offerId: string; freeVariantIds: string[] }) =>
+      api.patch(`/admin/offers/${id}`, { freeVariantIds }),
+    onSuccess: () => refresh(),
+    onError: (err) => toast.error(errorMessage(err, 'Could not update free variants')),
+  });
+
   return (
     <section className="rounded-lg border p-4">
       <p className="text-sm font-medium mb-3">Offers</p>
@@ -102,20 +119,36 @@ export function ProductOffersSection({ productId }: { productId: string }) {
       {attached.length ? (
         <ul className="divide-y rounded-md border text-sm mb-4">
           {attached.map((o) => (
-            <li key={o.id} className="flex items-center justify-between gap-2 px-3 py-2">
-              <span className="min-w-0">
-                <span className="font-medium">{o.name}</span>
-                <span className="text-muted-foreground"> · {describeAttachment(o)}</span>
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive"
-                disabled={detach.isPending}
-                onClick={() => detach.mutate(o)}
-              >
-                <X className="size-4" /> Detach
-              </Button>
+            <li key={o.id} className="px-3 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0">
+                  <span className="font-medium">{o.name}</span>
+                  <span className="text-muted-foreground"> · {describeAttachment(o)}</span>
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  disabled={detach.isPending}
+                  onClick={() => detach.mutate(o)}
+                >
+                  <X className="size-4" /> Detach
+                </Button>
+              </div>
+              {o.freeScope === 'ANY_VARIANT' && (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Customers choose from this product&apos;s {variants?.length ?? 0} variant
+                  {variants?.length === 1 ? '' : 's'}.
+                </p>
+              )}
+              {o.freeScope === 'SPECIFIC' && (
+                <FreeVariantPicker
+                  offer={o}
+                  variants={variants ?? []}
+                  pending={setFreeVariants.isPending}
+                  onChange={(freeVariantIds) => setFreeVariants.mutate({ offerId: o.id, freeVariantIds })}
+                />
+              )}
             </li>
           ))}
         </ul>
@@ -127,7 +160,11 @@ export function ProductOffersSection({ productId }: { productId: string }) {
       <div className="space-y-3 rounded-md bg-muted/30 p-3">
         <p className="text-xs font-medium">Attach an existing offer</p>
         <Select value={offerId} onValueChange={(v) => setOfferId(v ?? '')}>
-          <SelectTrigger><SelectValue placeholder="Choose an offer…" /></SelectTrigger>
+          <SelectTrigger className="w-full mb-3">
+            <SelectValue placeholder="Choose an offer…">
+              {offerId ? offers?.find((o) => o.id === offerId)?.name : 'Choose an offer…'}
+            </SelectValue>
+          </SelectTrigger>
           <SelectContent>
             {offers?.map((o) => (
               <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
@@ -137,23 +174,16 @@ export function ProductOffersSection({ productId }: { productId: string }) {
 
         {offerId && (
           <>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={scope === 'all' ? 'default' : 'outline'}
-                onClick={() => setScope('all')}
-              >
+            <div className="flex items-center gap-2 mb-3">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-input cursor-pointer"
+                  checked={scope === 'all'}
+                  onChange={(e) => setScope(e.target.checked ? 'all' : 'select')}
+                />
                 All variants
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={scope === 'select' ? 'default' : 'outline'}
-                onClick={() => setScope('select')}
-              >
-                Select variants
-              </Button>
+              </label>
             </div>
 
             {scope === 'select' && (
@@ -192,5 +222,63 @@ export function ProductOffersSection({ productId }: { productId: string }) {
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * Admin curation of the SPECIFIC free-variant pool — reuses the same variant
+ * list already loaded for trigger selection. One checked variant auto-adds
+ * for the customer; two or more prompt them to choose.
+ */
+function FreeVariantPicker({
+  offer,
+  variants,
+  pending,
+  onChange,
+}: {
+  offer: Offer;
+  variants: ProductVariantDetail[];
+  pending: boolean;
+  onChange: (freeVariantIds: string[]) => void;
+}) {
+  const variantLabel = (v: { id: string; name: string | null; sku: string | null }) =>
+    v.name || v.sku || v.id.slice(0, 6);
+  const freeIds = new Set(offer.freeVariants.map((v) => v.id));
+
+  return (
+    <div className="mt-2 rounded-md bg-muted/30 p-2.5">
+      <p className="text-xs font-medium mb-1.5">
+        Free variants ({offer.freeVariants.length} selected — one auto-adds, two or more let the
+        customer choose)
+      </p>
+      {variants.length ? (
+        <div className="flex flex-wrap gap-2">
+          {variants.map((v) => {
+            const on = freeIds.has(v.id);
+            return (
+              <button
+                key={v.id}
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  const next = on
+                    ? [...freeIds].filter((id) => id !== v.id)
+                    : [...freeIds, v.id];
+                  onChange(next);
+                }}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${
+                  on ? 'border-primary bg-primary text-primary-foreground' : 'border-input hover:bg-muted'
+                }`}
+              >
+                {on && <Check className="size-3" />}
+                {variantLabel(v)}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <span className="text-xs text-muted-foreground">No variants to select.</span>
+      )}
+    </div>
   );
 }

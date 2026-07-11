@@ -22,7 +22,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/format';
-import { CreditApplicationDetailSheet } from './credit-application-detail-sheet';
+import { useRouter } from 'next/navigation';
 
 const STATUS_VARIANT = {
   PENDING: 'secondary',
@@ -32,7 +32,7 @@ const STATUS_VARIANT = {
 
 export function CreditApplicationsView() {
   const [status, setStatus] = useState('all');
-  const [selected, setSelected] = useState<CreditApplication | null>(null);
+  const router = useRouter();
 
   const { data, isLoading } = useQuery<PaginatedResponse<CreditApplication>>({
     queryKey: ['credit-applications', status],
@@ -84,7 +84,7 @@ export function CreditApplicationsView() {
                 <TableRow
                   key={app.id}
                   className="cursor-pointer"
-                  onClick={() => setSelected(app)}
+                  onClick={() => router.push(`/credit-applications/${app.id}`)}
                 >
                   <TableCell className="font-medium">
                     {app.registeredBusinessName}
@@ -112,11 +112,6 @@ export function CreditApplicationsView() {
           </TableBody>
         </Table>
       </div>
-
-      <CreditApplicationDetailSheet
-        applicationId={selected?.id ?? null}
-        onClose={() => setSelected(null)}
-      />
     </div>
   );
 }

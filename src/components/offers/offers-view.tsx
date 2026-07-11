@@ -22,7 +22,14 @@ import { OfferEditSheet } from './offer-edit-sheet';
 export function describeReward(o: Offer): string {
   if (o.rewardType === 'FIXED_DISCOUNT') return `${formatCents(o.discountAmountCents ?? 0)} off`;
   if (o.rewardType === 'PERCENTAGE_DISCOUNT') return `${(o.discountBps ?? 0) / 100}% off`;
-  const target = o.freeScope === 'SPECIFIC' ? (o.freeProduct?.name ?? 'product') : 'same product';
+  const target =
+    o.freeScope === 'SPECIFIC'
+      ? o.freeVariants.length === 1
+        ? (o.freeVariants[0].name ?? 'variant')
+        : `${o.freeVariants.length} variant choices`
+      : o.freeScope === 'ANY_VARIANT'
+        ? 'any variant (customer choice)'
+        : 'same product/variant';
   return `${o.freeQty ?? 1} × free ${target}`;
 }
 
