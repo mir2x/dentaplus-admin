@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { BlogPost, PaginatedResponse } from '@/types/api';
 import {
@@ -18,11 +19,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDate } from '@/lib/format';
-import { BlogEditSheet } from './blog-edit-sheet';
 
 export function BlogView() {
   const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState<BlogPost | 'new' | null>(null);
+  const router = useRouter();
 
   const { data, isLoading } = useQuery<PaginatedResponse<BlogPost>>({
     queryKey: ['blog', search],
@@ -42,7 +42,7 @@ export function BlogView() {
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
         />
-        <Button className="ml-auto" onClick={() => setEditing('new')}>
+        <Button className="ml-auto" onClick={() => router.push('/blog/posts/new')}>
           <Plus className="size-4" /> New post
         </Button>
       </div>
@@ -70,7 +70,7 @@ export function BlogView() {
               ))
             ) : data?.data.length ? (
               data.data.map((p) => (
-                <TableRow key={p.id} className="cursor-pointer" onClick={() => setEditing(p)}>
+                <TableRow key={p.id} className="cursor-pointer" onClick={() => router.push(`/blog/posts/${p.id}`)}>
                   <TableCell className="font-medium max-w-72 truncate">{p.title}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{p.slug}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">
@@ -93,8 +93,6 @@ export function BlogView() {
           </TableBody>
         </Table>
       </div>
-
-      <BlogEditSheet editing={editing} onClose={() => setEditing(null)} />
     </div>
   );
 }
