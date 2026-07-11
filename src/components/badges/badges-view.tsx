@@ -38,6 +38,7 @@ export function BadgesView() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12" />
               <TableHead>Label</TableHead>
               <TableHead>Kind</TableHead>
               <TableHead className="text-center">Priority</TableHead>
@@ -49,7 +50,7 @@ export function BadgesView() {
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 5 }).map((_, j) => (
+                  {Array.from({ length: 6 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -59,6 +60,14 @@ export function BadgesView() {
             ) : data?.length ? (
               data.map((b) => (
                 <TableRow key={b.id} className="cursor-pointer" onClick={() => setEditing(b)}>
+                  <TableCell>
+                    {b.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={b.imageUrl} alt={b.label} className="size-8 rounded border object-cover" />
+                    ) : (
+                      <div className="size-8 rounded border border-dashed" />
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">
                     <span
                       className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
@@ -85,7 +94,7 @@ export function BadgesView() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No badges yet
                 </TableCell>
               </TableRow>

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { ProductBadge, ProductBadgeKind } from '@/types/api';
@@ -64,8 +64,27 @@ function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClos
   const [label, setLabel] = useState(isEdit ? editing.label : '');
   const [kind, setKind] = useState<ProductBadgeKind>(isEdit ? editing.kind : 'CUSTOM');
   const [color, setColor] = useState(isEdit ? (editing.color ?? '') : '');
+  const [imageUrl, setImageUrl] = useState(isEdit ? (editing.imageUrl ?? '') : '');
   const [priority, setPriority] = useState(isEdit ? String(editing.priority) : '0');
   const [isActive, setIsActive] = useState(isEdit ? editing.isActive : true);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('folder', 'badges');
+      const { data: uploaded } = await api.post('/admin/upload', form);
+      setImageUrl(uploaded.url);
+    } catch {
+      toast.error('Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
 
   const save = useMutation({
     mutationFn: () => {
@@ -73,6 +92,7 @@ function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClos
         label,
         kind,
         color: color || undefined,
+        imageUrl: imageUrl || undefined,
         priority: Number(priority) || 0,
         isActive,
       };
@@ -154,6 +174,50 @@ function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClos
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
             />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Image</Label>
+          <div className="flex items-center gap-3">
+            {imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imageUrl} alt={label} className="size-12 rounded border object-cover" />
+            ) : (
+              <div className="flex size-12 items-center justify-center rounded border border-dashed text-xs text-muted-foreground">
+                None
+              </div>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleFile(file);
+              }}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Upload className="size-4" /> {uploading ? 'Uploading…' : imageUrl ? 'Replace' : 'Upload'}
+            </Button>
+            {imageUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 text-destructive hover:text-destructive"
+                onClick={() => setImageUrl('')}
+              >
+                <X className="size-4" />
+              </Button>
+            )}
           </div>
         </div>
 

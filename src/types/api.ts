@@ -111,6 +111,7 @@ export interface ProductBadge {
   label: string;
   kind: ProductBadgeKind;
   color: string | null;
+  imageUrl: string | null;
   priority: number;
   isActive: boolean;
   _count?: { products: number };
