@@ -17,7 +17,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-type CategoryLike = Category | Category['children'][number];
+interface CategoryLike {
+  id: string;
+  name: string;
+  slug: string;
+  parentId: string | null;
+}
 
 const NO_PARENT = '__none__';
 
@@ -78,6 +83,7 @@ function CategoryForm({
     onSuccess: () => {
       toast.success(isEdit ? 'Category updated' : 'Category created');
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['categories-browse'] });
       onClose();
     },
     onError: () => toast.error('Save failed (check the name/slug is unique for this parent)'),
@@ -88,6 +94,7 @@ function CategoryForm({
     onSuccess: () => {
       toast.success('Category deleted');
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['categories-browse'] });
       onClose();
     },
     onError: () => toast.error('Delete failed (remove subcategories first)'),

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Tag } from '@/types/api';
+import { PaginatedResponse, TagListItem } from '@/types/api';
 import {
   Table,
   TableBody,
@@ -14,21 +14,56 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TagEditSheet } from './tag-edit-sheet';
 
-export function TagsView() {
-  const [editing, setEditing] = useState<Tag | 'new' | null>(null);
+const LIMIT = 20;
 
-  const { data, isLoading } = useQuery<Tag[]>({
-    queryKey: ['tags'],
-    queryFn: async () => (await api.get('/admin/tags')).data,
+export function TagsView() {
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<TagListItem | 'new' | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['tags-browse', search],
+    queryFn: async ({ pageParam }) => {
+      const params: Record<string, string> = { page: String(pageParam), limit: String(LIMIT) };
+      if (search) params.search = search;
+      return (await api.get<PaginatedResponse<TagListItem>>('/admin/tags/browse', { params })).data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.pages ? lastPage.meta.page + 1 : undefined,
   });
+
+  const tags = data?.pages.flatMap((p) => p.data) ?? [];
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={() => setEditing('new')}>
+      <div className="flex items-center gap-3">
+        <Input
+          placeholder="Search name or slug…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+        <Button className="ml-auto" onClick={() => setEditing('new')}>
           <Plus className="size-4" /> New tag
         </Button>
       </div>
@@ -53,24 +88,29 @@ export function TagsView() {
                   ))}
                 </TableRow>
               ))
-            ) : data?.length ? (
-              data.map((tag) => (
+            ) : tags.length ? (
+              tags.map((tag) => (
                 <TableRow key={tag.id} className="cursor-pointer" onClick={() => setEditing(tag)}>
                   <TableCell className="font-medium">{tag.name}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{tag.slug}</TableCell>
-                  <TableCell className="text-center text-sm">{tag._count?.products ?? 0}</TableCell>
+                  <TableCell className="text-center text-sm">{tag.productCount}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                  No tags yet
+                  No tags found
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      <div ref={sentinelRef} />
+      {isFetchingNextPage && (
+        <p className="text-center text-xs text-muted-foreground">Loading more…</p>
+      )}
 
       <TagEditSheet editing={editing} onClose={() => setEditing(null)} />
     </div>

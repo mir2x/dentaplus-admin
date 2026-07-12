@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Category } from '@/types/api';
+import { Category, CategoryListItem, PaginatedResponse } from '@/types/api';
 import {
   Table,
   TableBody,
@@ -14,23 +14,63 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CategoryEditSheet } from './category-edit-sheet';
 
-export function CategoriesView() {
-  const [editing, setEditing] = useState<Category | Category['children'][number] | 'new' | null>(
-    null,
-  );
+const LIMIT = 20;
 
-  const { data, isLoading } = useQuery<Category[]>({
+export function CategoriesView() {
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<CategoryListItem | 'new' | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Unpaginated top-level + children tree — only used to populate the "Parent category" dropdown.
+  const { data: tree } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => (await api.get('/admin/categories')).data,
   });
 
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['categories-browse', search],
+    queryFn: async ({ pageParam }) => {
+      const params: Record<string, string> = { page: String(pageParam), limit: String(LIMIT) };
+      if (search) params.search = search;
+      return (await api.get<PaginatedResponse<CategoryListItem>>('/admin/categories/browse', { params }))
+        .data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.pages ? lastPage.meta.page + 1 : undefined,
+  });
+
+  const categories = data?.pages.flatMap((p) => p.data) ?? [];
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={() => setEditing('new')}>
+      <div className="flex items-center gap-3">
+        <Input
+          placeholder="Search name or slug…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+        <Button className="ml-auto" onClick={() => setEditing('new')}>
           <Plus className="size-4" /> New category
         </Button>
       </div>
@@ -41,7 +81,7 @@ export function CategoriesView() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Slug</TableHead>
-              <TableHead className="text-center">Subcategories</TableHead>
+              <TableHead className="text-center">Products</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -55,37 +95,31 @@ export function CategoriesView() {
                   ))}
                 </TableRow>
               ))
-            ) : data?.length ? (
-              data.flatMap((category) => [
+            ) : categories.length ? (
+              categories.map((category) => (
                 <TableRow
                   key={category.id}
                   className="cursor-pointer"
                   onClick={() => setEditing(category)}
                 >
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{category.slug}</TableCell>
-                  <TableCell className="text-center text-sm">
-                    {category.children.length}
+                  <TableCell className="font-medium">
+                    {category.parentName ? (
+                      <>
+                        <span className="text-muted-foreground">{category.parentName} › </span>
+                        {category.name}
+                      </>
+                    ) : (
+                      category.name
+                    )}
                   </TableCell>
-                </TableRow>,
-                ...category.children.map((child) => (
-                  <TableRow
-                    key={child.id}
-                    className="cursor-pointer"
-                    onClick={() => setEditing(child)}
-                  >
-                    <TableCell className="pl-8 text-sm text-muted-foreground">
-                      — {child.name}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{child.slug}</TableCell>
-                    <TableCell className="text-center text-sm">—</TableCell>
-                  </TableRow>
-                )),
-              ])
+                  <TableCell className="text-muted-foreground text-sm">{category.slug}</TableCell>
+                  <TableCell className="text-center text-sm">{category.productCount}</TableCell>
+                </TableRow>
+              ))
             ) : (
               <TableRow>
                 <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                  No categories yet
+                  No categories found
                 </TableCell>
               </TableRow>
             )}
@@ -93,11 +127,12 @@ export function CategoriesView() {
         </Table>
       </div>
 
-      <CategoryEditSheet
-        editing={editing}
-        topLevel={data ?? []}
-        onClose={() => setEditing(null)}
-      />
+      <div ref={sentinelRef} />
+      {isFetchingNextPage && (
+        <p className="text-center text-xs text-muted-foreground">Loading more…</p>
+      )}
+
+      <CategoryEditSheet editing={editing} topLevel={tree ?? []} onClose={() => setEditing(null)} />
     </div>
   );
 }

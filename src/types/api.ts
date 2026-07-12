@@ -305,6 +305,22 @@ export interface Tag {
   _count?: { products: number };
 }
 
+export interface CategoryListItem {
+  id: string;
+  name: string;
+  slug: string;
+  parentId: string | null;
+  parentName: string | null;
+  productCount: number;
+}
+
+export interface TagListItem {
+  id: string;
+  name: string;
+  slug: string;
+  productCount: number;
+}
+
 export interface Customer {
   id: string;
   email: string;

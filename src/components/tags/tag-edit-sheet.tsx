@@ -4,14 +4,14 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Tag } from '@/types/api';
+import { TagListItem } from '@/types/api';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 interface Props {
-  editing: Tag | 'new' | null;
+  editing: TagListItem | 'new' | null;
   onClose: () => void;
 }
 
@@ -27,7 +27,7 @@ export function TagEditSheet({ editing, onClose }: Props) {
   );
 }
 
-function TagForm({ editing, onClose }: { editing: Tag | 'new'; onClose: () => void }) {
+function TagForm({ editing, onClose }: { editing: TagListItem | 'new'; onClose: () => void }) {
   const queryClient = useQueryClient();
   const isEdit = editing !== 'new';
 
@@ -44,16 +44,18 @@ function TagForm({ editing, onClose }: { editing: Tag | 'new'; onClose: () => vo
     onSuccess: () => {
       toast.success(isEdit ? 'Tag updated' : 'Tag created');
       queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['tags-browse'] });
       onClose();
     },
     onError: () => toast.error('Save failed (check the name/slug is unique)'),
   });
 
   const del = useMutation({
-    mutationFn: () => api.delete(`/admin/tags/${(editing as Tag).id}`),
+    mutationFn: () => api.delete(`/admin/tags/${(editing as TagListItem).id}`),
     onSuccess: () => {
       toast.success('Tag deleted');
       queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['tags-browse'] });
       onClose();
     },
     onError: () => toast.error('Delete failed'),
