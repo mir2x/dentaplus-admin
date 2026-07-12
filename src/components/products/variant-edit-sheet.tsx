@@ -73,7 +73,9 @@ function VariantForm({
   );
   const [thumbnailUrl, setThumbnailUrl] = useState(isEdit ? (editing.thumbnailUrl ?? '') : '');
   const [isActive, setIsActive] = useState(isEdit ? editing.isActive : true);
-  const [options, setOptions] = useState<Option[]>(isEdit ? editing.options : []);
+  const [options, setOptions] = useState<Option[]>(
+    isEdit ? editing.options.map((o) => ({ attributeName: o.attributeName, value: o.value })) : [],
+  );
 
   const { data: attributes } = useQuery<Attribute[]>({
     queryKey: ['attributes'],
