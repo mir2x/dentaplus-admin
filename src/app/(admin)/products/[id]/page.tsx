@@ -4,7 +4,7 @@ import { use, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   Brand,
@@ -13,6 +13,7 @@ import {
   ProductDetail,
   ProductType,
   QboProductSnapshot,
+  Tag,
 } from '@/types/api';
 import { formatCents, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
@@ -348,6 +349,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   const [categoryIds, setCategoryIds] = useState<string[]>(
     product.categories.map((c) => c.category.id),
   );
+  const [tagIds, setTagIds] = useState<string[]>(product.tags.map((t) => t.tag.id));
 
   const { data: brands } = useQuery<Brand[]>({
     queryKey: ['brands'],
@@ -360,6 +362,10 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   const { data: allCategories } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => (await api.get('/admin/categories')).data,
+  });
+  const { data: allTags } = useQuery<Tag[]>({
+    queryKey: ['tags'],
+    queryFn: async () => (await api.get('/admin/tags')).data,
   });
 
   const save = useMutation({
@@ -394,6 +400,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           };
       await api.patch(`/admin/products/${product.id}`, { ...storefront, ...core });
       await api.put(`/admin/products/${product.id}/categories`, { categoryIds });
+      await api.put(`/admin/products/${product.id}/tags`, { tagIds });
     },
     onSuccess: () => {
       toast.success('Product saved');
@@ -421,8 +428,37 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
       return next;
     });
 
+  const categoryNameById = new Map<string, string>();
+  const categoryParentNameById = new Map<string, string>();
+  const categoryChildIds = new Map<string, string[]>();
+  allCategories?.forEach((cat) => {
+    categoryNameById.set(cat.id, cat.name);
+    categoryChildIds.set(
+      cat.id,
+      cat.children.map((child) => child.id),
+    );
+    cat.children.forEach((child) => {
+      categoryNameById.set(child.id, child.name);
+      categoryParentNameById.set(child.id, cat.name);
+    });
+  });
+
+  // Removing a parent category also drops any of its subcategories that are assigned,
+  // since a subcategory shouldn't remain assigned once its parent is gone.
   const toggleCategory = (id: string) =>
-    setCategoryIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+    setCategoryIds((cur) => {
+      if (cur.includes(id)) {
+        const childIds = categoryChildIds.get(id) ?? [];
+        return cur.filter((x) => x !== id && !childIds.includes(x));
+      }
+      return [...cur, id];
+    });
+
+  const tagNameById = new Map<string, string>();
+  allTags?.forEach((tag) => tagNameById.set(tag.id, tag.name));
+
+  const toggleTag = (id: string) =>
+    setTagIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -623,18 +659,56 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
         </Section>
 
         <Section title="Categories">
+          <div className="mb-3">
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+              Assigned ({categoryIds.length})
+            </p>
+            {categoryIds.length ? (
+              <div className="flex flex-wrap gap-1.5">
+                {categoryIds.map((id) => {
+                  const name = categoryNameById.get(id) ?? id;
+                  const parentName = categoryParentNameById.get(id);
+                  return (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs"
+                    >
+                      {parentName ? (
+                        <>
+                          <span className="text-muted-foreground">{parentName} ›</span> {name}
+                        </>
+                      ) : (
+                        name
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory(id)}
+                        aria-label={`Remove ${name}`}
+                        className="rounded-full p-0.5 hover:bg-muted-foreground/20"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No categories assigned.</p>
+            )}
+          </div>
+
           {allCategories?.length ? (
             <div className="rounded-md border divide-y max-h-56 overflow-y-auto">
               {allCategories.map((cat) => (
                 <div key={cat.id}>
-                  <CategoryRow
+                  <PickerRow
                     id={cat.id}
                     name={cat.name}
                     selected={categoryIds.includes(cat.id)}
                     onToggle={toggleCategory}
                   />
                   {cat.children.map((child) => (
-                    <CategoryRow
+                    <PickerRow
                       key={child.id}
                       id={child.id}
                       name={child.name}
@@ -648,6 +722,56 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">No categories defined.</p>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
+        </Section>
+
+        <Section title="Tags">
+          <div className="mb-3">
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+              Assigned ({tagIds.length})
+            </p>
+            {tagIds.length ? (
+              <div className="flex flex-wrap gap-1.5">
+                {tagIds.map((id) => {
+                  const name = tagNameById.get(id) ?? id;
+                  return (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs"
+                    >
+                      {name}
+                      <button
+                        type="button"
+                        onClick={() => toggleTag(id)}
+                        aria-label={`Remove ${name}`}
+                        className="rounded-full p-0.5 hover:bg-muted-foreground/20"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No tags assigned.</p>
+            )}
+          </div>
+
+          {allTags?.length ? (
+            <div className="rounded-md border divide-y max-h-56 overflow-y-auto">
+              {allTags.map((tag) => (
+                <PickerRow
+                  key={tag.id}
+                  id={tag.id}
+                  name={tag.name}
+                  selected={tagIds.includes(tag.id)}
+                  onToggle={toggleTag}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No tags defined.</p>
           )}
           <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
         </Section>
@@ -717,7 +841,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-function CategoryRow({
+function PickerRow({
   id,
   name,
   selected,

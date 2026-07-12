@@ -298,6 +298,13 @@ export interface Category {
   children: { id: string; name: string; slug: string; parentId: string | null }[];
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  slug: string;
+  _count?: { products: number };
+}
+
 export interface Customer {
   id: string;
   email: string;
