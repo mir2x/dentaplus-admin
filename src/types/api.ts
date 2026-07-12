@@ -294,7 +294,8 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
-  children: { id: string; name: string; slug: string }[];
+  parentId: string | null;
+  children: { id: string; name: string; slug: string; parentId: string | null }[];
 }
 
 export interface Customer {

@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   Package,
   Boxes,
+  FolderTree,
   Users,
   Tag,
   Gift,
@@ -63,6 +64,7 @@ const navGroups = [
     items: [
       { href: '/orders', label: 'Orders', icon: ShoppingCart },
       { href: '/products', label: 'Products', icon: Package },
+      { href: '/categories', label: 'Categories', icon: FolderTree },
       { href: '/inventory', label: 'Inventory', icon: Boxes },
       { href: '/customers', label: 'Customers', icon: Users },
     ],
