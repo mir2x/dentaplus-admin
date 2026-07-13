@@ -91,6 +91,32 @@ export interface OrderNote {
   isCustomerNote: boolean;
 }
 
+export type BackOrderReviewStatus = 'DRAFT' | 'PENDING' | 'PROCESSING' | 'DECLINED';
+export type BackOrderStatus = 'OPEN' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'CANCELLED';
+export type BackOrderItemDecision = 'PENDING_REVIEW' | 'APPROVED' | 'DECLINED';
+
+export interface BackOrderItem {
+  id: string;
+  sku: string | null;
+  name: string;
+  quantity: number;
+  fulfilledQty: number;
+  decision: BackOrderItemDecision;
+}
+
+export interface BackOrder {
+  id: string;
+  backOrderNo: string;
+  reviewStatus: BackOrderReviewStatus;
+  status: BackOrderStatus | null;
+  hasUnreviewedItems: boolean;
+  createdAt: string;
+  updatedAt: string;
+  items: BackOrderItem[];
+  orderNo: string;
+  customer: { id: string; email: string; displayName: string | null } | null;
+}
+
 export interface ProductPrice {
   type: 'REGULAR' | 'SALE';
   amountCents: number;

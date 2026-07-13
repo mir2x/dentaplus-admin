@@ -11,6 +11,7 @@ import {
   RefreshCw,
   ShoppingCart,
   Package,
+  PackageSearch,
   Boxes,
   FolderTree,
   Users,
@@ -64,6 +65,7 @@ const navGroups = [
     label: 'Commerce',
     items: [
       { href: '/orders', label: 'Orders', icon: ShoppingCart },
+      { href: '/back-orders', label: 'Back Orders', icon: PackageSearch },
       { href: '/products', label: 'Products', icon: Package },
       { href: '/categories', label: 'Categories', icon: FolderTree },
       { href: '/tags', label: 'Tags', icon: Tags },
