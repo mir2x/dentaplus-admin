@@ -111,7 +111,7 @@ function PromoForm({ editing, onClose }: { editing: PromoCode | 'new'; onClose: 
         <SheetTitle>{isEdit ? `Edit ${editing.code}` : 'New promo code'}</SheetTitle>
       </SheetHeader>
 
-      <div className="space-y-4">
+      <div className="space-y-4 px-4 pb-6">
         {!isEdit && (
           <Field label="Code">
             <Input

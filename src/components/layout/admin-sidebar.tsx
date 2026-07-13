@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import {
   LayoutDashboard,
   FileText,
@@ -36,6 +38,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
@@ -106,6 +109,12 @@ export function AdminSidebar() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
 
+  const { data: unreadContactCount } = useQuery({
+    queryKey: ['contact-messages-unread-count'],
+    queryFn: async () => (await api.get<{ count: number }>('/admin/contact-messages/unread-count')).data.count,
+    refetchInterval: 30_000,
+  });
+
   const handleLogout = () => {
     logout();
     router.replace('/login');
@@ -131,6 +140,11 @@ export function AdminSidebar() {
                     <Icon className="size-4" />
                     {label}
                   </SidebarMenuButton>
+                  {href === '/contact-messages' && !!unreadContactCount && (
+                    <SidebarMenuBadge className="bg-primary text-primary-foreground">
+                      {unreadContactCount}
+                    </SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

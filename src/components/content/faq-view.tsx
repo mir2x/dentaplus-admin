@@ -140,7 +140,7 @@ function FaqForm({ editing, onClose }: { editing: FaqItem | 'new'; onClose: () =
       <SheetHeader className="mb-4">
         <SheetTitle>{isEdit ? 'Edit FAQ' : 'New FAQ'}</SheetTitle>
       </SheetHeader>
-      <div className="space-y-4">
+      <div className="space-y-4 px-4 pb-6">
         <div className="space-y-1.5">
           <Label>Question</Label>
           <Input value={question} onChange={(e) => setQuestion(e.target.value)} />

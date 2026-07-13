@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime } from '@/lib/format';
+import { Mail, User, Clock, MessageSquare, Trash2 } from 'lucide-react';
 
 export function ContactMessagesView() {
   const queryClient = useQueryClient();
@@ -42,7 +43,10 @@ export function ContactMessagesView() {
 
   const markRead = useMutation({
     mutationFn: (id: string) => api.patch(`/admin/contact-messages/${id}/read`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contact-messages'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contact-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['contact-messages-unread-count'] });
+    },
   });
 
   const del = useMutation({
@@ -50,6 +54,7 @@ export function ContactMessagesView() {
     onSuccess: () => {
       toast.success('Message deleted');
       queryClient.invalidateQueries({ queryKey: ['contact-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['contact-messages-unread-count'] });
       setSelected(null);
     },
     onError: () => toast.error('Delete failed'),
@@ -120,27 +125,50 @@ export function ContactMessagesView() {
       </div>
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto sm:w-[40vw] sm:min-w-[26rem] sm:max-w-2xl">
           {selected && (
             <>
-              <SheetHeader className="mb-4">
-                <SheetTitle>{selected.subject}</SheetTitle>
-                <p className="text-sm text-muted-foreground">
-                  {selected.firstName} {selected.lastName}
-                  {selected.email && ` · ${selected.email}`}
-                </p>
-                <p className="text-xs text-muted-foreground">{formatDateTime(selected.createdAt)}</p>
+              <SheetHeader className="gap-1.5 border-b pb-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Subject</p>
+                <div className="flex items-start justify-between gap-3 pr-6">
+                  <SheetTitle className="text-lg leading-snug">{selected.subject}</SheetTitle>
+                  {!selected.isRead && <Badge className="mt-0.5 shrink-0">New</Badge>}
+                </div>
               </SheetHeader>
-              <p className="text-sm whitespace-pre-wrap">{selected.message}</p>
-              <div className="mt-6 flex gap-2">
+
+              <div className="space-y-6 px-6 py-6">
+                <section className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                  <ContactInfoRow icon={User} label="Name">
+                    {selected.firstName} {selected.lastName}
+                  </ContactInfoRow>
+                  <ContactInfoRow icon={Mail} label="Email">
+                    {selected.email ?? '—'}
+                  </ContactInfoRow>
+                  <ContactInfoRow icon={Clock} label="Received">
+                    {formatDateTime(selected.createdAt)}
+                  </ContactInfoRow>
+                </section>
+
+                <section className="space-y-2">
+                  <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <MessageSquare className="size-3.5" /> Message
+                  </p>
+                  <div className="rounded-lg border p-4">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{selected.message}</p>
+                  </div>
+                </section>
+              </div>
+
+              <div className="mt-auto flex gap-2 border-t p-4">
                 {selected.email && (
                   <Button
+                    className="flex-1"
                     variant="outline"
                     onClick={() => {
                       window.location.href = `mailto:${selected.email}?subject=${encodeURIComponent('Re: ' + selected.subject)}`;
                     }}
                   >
-                    Reply by email
+                    <Mail className="size-4" /> Reply by email
                   </Button>
                 )}
                 <Button
@@ -148,13 +176,33 @@ export function ContactMessagesView() {
                   disabled={del.isPending}
                   onClick={() => del.mutate(selected.id)}
                 >
-                  Delete
+                  <Trash2 className="size-4" /> {del.isPending ? 'Deleting…' : 'Delete'}
                 </Button>
               </div>
             </>
           )}
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+function ContactInfoRow({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-2.5 text-sm">
+      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="truncate font-medium">{children}</p>
+      </div>
     </div>
   );
 }
