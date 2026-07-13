@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Upload, X } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Brand, Category, ProductBadge, ProductType } from '@/types/api';
+import { Category, ProductBadge, ProductType } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,7 +49,7 @@ export default function NewProductPage() {
   const [sku, setSku] = useState('');
   const [gtin, setGtin] = useState('');
   const [type, setType] = useState<ProductType>('GENERAL');
-  const [brandId, setBrandId] = useState('');
+  const [brand, setBrand] = useState('');
 
   // Pricing
   const [regularPrice, setRegularPrice] = useState('');
@@ -58,12 +58,6 @@ export default function NewProductPage() {
   // Descriptions
   const [shortDesc, setShortDesc] = useState('');
   const [description, setDescription] = useState('');
-
-  // Dimensions
-  const [weightKg, setWeightKg] = useState('');
-  const [lengthCm, setLengthCm] = useState('');
-  const [widthCm, setWidthCm] = useState('');
-  const [heightCm, setHeightCm] = useState('');
 
   // Tax
   const [taxStatus, setTaxStatus] = useState('taxable');
@@ -84,11 +78,6 @@ export default function NewProductPage() {
 
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [badgeIds, setBadgeIds] = useState<string[]>([]);
-
-  const { data: brands } = useQuery<Brand[]>({
-    queryKey: ['brands'],
-    queryFn: async () => (await api.get('/admin/brands')).data,
-  });
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -124,7 +113,7 @@ export default function NewProductPage() {
         sku: hasVariant ? undefined : sku || undefined,
         gtin: gtin || undefined,
         type,
-        brandId: brandId || undefined,
+        brand: brand || undefined,
         shortDescription: shortDesc || undefined,
         description: description || undefined,
         regularPrice: regularPrice ? parseFloat(regularPrice) : 0,
@@ -135,10 +124,6 @@ export default function NewProductPage() {
         requiresPrescription,
         allowReviews,
         position: position ? parseInt(position, 10) : undefined,
-        weightKg: weightKg ? parseFloat(weightKg) : undefined,
-        lengthCm: lengthCm ? parseFloat(lengthCm) : undefined,
-        widthCm: widthCm ? parseFloat(widthCm) : undefined,
-        heightCm: heightCm ? parseFloat(heightCm) : undefined,
         published,
         featured,
       });
@@ -214,15 +199,7 @@ export default function NewProductPage() {
             </Select>
           </Field>
           <Field label="Brand">
-            <Select value={brandId} onValueChange={(v) => setBrandId(v ?? '')}>
-              <SelectTrigger><SelectValue placeholder="No brand" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No brand</SelectItem>
-                {brands?.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input placeholder="e.g. Colgate" value={brand} onChange={(e) => setBrand(e.target.value)} />
           </Field>
         </div>
 
@@ -317,25 +294,6 @@ export default function NewProductPage() {
         <Field label="Full description">
           <RichTextEditor value={description} onChange={setDescription} minHeight="10rem" />
         </Field>
-
-        {/* ── Dimensions ── */}
-        <div className="border-t pt-4">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Dimensions</p>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Weight (kg)">
-              <Input type="number" step="0.001" min="0" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
-            </Field>
-            <Field label="Length (cm)">
-              <Input type="number" step="0.1" min="0" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
-            </Field>
-            <Field label="Width (cm)">
-              <Input type="number" step="0.1" min="0" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} />
-            </Field>
-            <Field label="Height (cm)">
-              <Input type="number" step="0.1" min="0" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
-            </Field>
-          </div>
-        </div>
 
         {/* ── Tax ── */}
         <div className="border-t pt-4">

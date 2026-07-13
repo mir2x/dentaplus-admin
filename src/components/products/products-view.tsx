@@ -215,7 +215,7 @@ export function ProductsView() {
                         {product.sku ?? '—'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {product.brand?.name ?? '—'}
+                        {product.brand ?? '—'}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {firstCategory?.name ?? '—'}

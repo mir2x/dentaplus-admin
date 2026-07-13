@@ -175,7 +175,7 @@ export interface Product {
   featured: boolean;
   shortDescription: string | null;
   quickbooksItemId?: string | null;
-  brand: { id: string; name: string; slug: string } | null;
+  brand: string | null;
   prices: ProductPrice[];
   inventory: { inStock: boolean; quantity: number | null } | null;
   categories: { category: { id: string; name: string; slug: string } }[];
@@ -215,11 +215,6 @@ export interface ProductDetail extends Product {
   taxStatus: string | null;
   taxClass: string | null;
   position: number | null;
-  legacyWooId: number | null;
-  weightKg: string | null;
-  lengthCm: string | null;
-  widthCm: string | null;
-  heightCm: string | null;
   createdAt: string;
   updatedAt: string;
   inventory:
@@ -277,12 +272,6 @@ export type QboCustomerSnapshot =
   | { linked: false }
   | { linked: true; connected: true; customer: QboCustomer }
   | { linked: true; connected: false; error: string };
-
-export interface Brand {
-  id: string;
-  name: string;
-  slug: string;
-}
 
 export interface CustomerRole {
   id: string;

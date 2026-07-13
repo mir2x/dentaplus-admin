@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { ArrowLeft, Check, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
-  Brand,
   Category,
   ProductBadge,
   ProductDetail,
@@ -154,7 +153,7 @@ function ProductView({ product }: { product: ProductDetail }) {
           <Row label="SKU" value={product.sku} />
           <Row label="GTIN" value={product.gtin} />
           <Row label="Type" value={product.type} />
-          <Row label="Brand" value={product.brand?.name} />
+          <Row label="Brand" value={product.brand} />
           <Row label="Position" value={product.position?.toString()} />
           <Row label="Catalog visibility" value={product.catalogVisibility} />
           <Row label="Requires prescription" value={product.requiresPrescription ? 'Yes' : 'No'} />
@@ -186,13 +185,6 @@ function ProductView({ product }: { product: ProductDetail }) {
               ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.description.replace(/\\n/g, '') }} />
               : <p>—</p>}
           </div>
-        </Section>
-
-        <Section title="Dimensions">
-          <Row label="Weight (kg)" value={product.weightKg} />
-          <Row label="Length (cm)" value={product.lengthCm} />
-          <Row label="Width (cm)" value={product.widthCm} />
-          <Row label="Height (cm)" value={product.heightCm} />
         </Section>
 
         <Section title="Categories & tags">
@@ -289,7 +281,6 @@ function ProductView({ product }: { product: ProductDetail }) {
           <Row label="Created" value={formatDate(product.createdAt)} />
           <Row label="Updated" value={formatDate(product.updatedAt)} />
           <Row label="QuickBooks item ID" value={product.quickbooksItemId} />
-          <Row label="Legacy Woo ID" value={product.legacyWooId?.toString()} />
         </Section>
       </div>
     </div>
@@ -334,16 +325,12 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   const [position, setPosition] = useState(product.position?.toString() ?? '');
   const [shortDesc, setShortDesc] = useState(product.shortDescription ?? '');
   const [description, setDescription] = useState(product.description ?? '');
-  const [brandId, setBrandId] = useState(product.brand?.id ?? '');
+  const [brand, setBrand] = useState(product.brand ?? '');
   const [regularPrice, setRegularPrice] = useState(regular ? (regular.amountCents / 100).toFixed(2) : '');
   const [salePrice, setSalePrice] = useState(sale ? (sale.amountCents / 100).toFixed(2) : '');
   const [stock, setStock] = useState(product.inventory?.quantity?.toString() ?? '');
   const [taxStatus, setTaxStatus] = useState(product.taxStatus ?? 'taxable');
   const [taxClass, setTaxClass] = useState(product.taxClass ?? '');
-  const [weightKg, setWeightKg] = useState(product.weightKg ?? '');
-  const [lengthCm, setLengthCm] = useState(product.lengthCm ?? '');
-  const [widthCm, setWidthCm] = useState(product.widthCm ?? '');
-  const [heightCm, setHeightCm] = useState(product.heightCm ?? '');
 
   const [badgeIds, setBadgeIds] = useState<string[]>(product.badges.map((b) => b.badge.id));
   const [categoryIds, setCategoryIds] = useState<string[]>(
@@ -351,10 +338,6 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   );
   const [tagIds, setTagIds] = useState<string[]>(product.tags.map((t) => t.tag.id));
 
-  const { data: brands } = useQuery<Brand[]>({
-    queryKey: ['brands'],
-    queryFn: async () => (await api.get('/admin/brands')).data,
-  });
   const { data: allBadges } = useQuery<ProductBadge[]>({
     queryKey: ['badges'],
     queryFn: async () => (await api.get('/admin/badges')).data,
@@ -381,14 +364,10 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
         position: position !== '' ? parseInt(position, 10) : undefined,
         shortDescription: shortDesc || undefined,
         description: description || undefined,
-        brandId: brandId || undefined,
+        brand,
         salePrice: salePrice ? parseFloat(salePrice) : undefined,
         taxStatus,
         taxClass: taxClass || undefined,
-        weightKg: weightKg !== '' ? parseFloat(weightKg) : null,
-        lengthCm: lengthCm !== '' ? parseFloat(lengthCm) : null,
-        widthCm: widthCm !== '' ? parseFloat(widthCm) : null,
-        heightCm: heightCm !== '' ? parseFloat(heightCm) : null,
       };
       const core = isQbo
         ? {}
@@ -498,19 +477,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
               </Select>
             </FieldRow>
             <FieldRow label="Brand">
-              <Select value={brandId} onValueChange={(v) => setBrandId(v ?? '')}>
-                <SelectTrigger><SelectValue placeholder="No brand" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No brand</SelectItem>
-                  {brands
-                    ? brands.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                      ))
-                    : product.brand && (
-                        <SelectItem value={product.brand.id}>{product.brand.name}</SelectItem>
-                      )}
-                </SelectContent>
-              </Select>
+              <Input placeholder="e.g. Colgate" value={brand} onChange={(e) => setBrand(e.target.value)} />
             </FieldRow>
           </div>
         </Section>
@@ -538,22 +505,6 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           </FieldRow>
         </Section>
 
-        <Section title="Dimensions">
-          <div className="grid grid-cols-2 gap-3">
-            <FieldRow label="Weight (kg)">
-              <Input type="number" step="0.001" min="0" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
-            </FieldRow>
-            <FieldRow label="Length (cm)">
-              <Input type="number" step="0.1" min="0" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
-            </FieldRow>
-            <FieldRow label="Width (cm)">
-              <Input type="number" step="0.1" min="0" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} />
-            </FieldRow>
-            <FieldRow label="Height (cm)">
-              <Input type="number" step="0.1" min="0" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
-            </FieldRow>
-          </div>
-        </Section>
 
         <Section title="Tax">
           <div className="grid grid-cols-2 gap-3">
