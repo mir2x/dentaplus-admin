@@ -180,6 +180,7 @@ function ProductView({ product }: { product: ProductDetail }) {
             <Row label="Quantity" value={product.inventory?.quantity?.toString()} />
             <Row label="Low-stock threshold" value={product.inventory?.lowStockAmount?.toString()} />
             <Row label="Backorders allowed" value={product.inventory ? (product.inventory.backordersAllowed ? 'Yes' : 'No') : '—'} />
+            <Row label="Sold individually" value={product.inventory ? (product.inventory.soldIndividually ? 'Yes' : 'No') : '—'} />
           </Section>
         )}
 
@@ -263,7 +264,11 @@ function ProductView({ product }: { product: ProductDetail }) {
         </Section>
 
         <Section title="Wholesale pricing">
-          {product.wholesaleRules.length ? (
+          {product.hasVariant ? (
+            <p className="text-xs text-muted-foreground">
+              Managed per-variant (see Variants below).
+            </p>
+          ) : product.wholesaleRules.length ? (
             <ul className="divide-y rounded-md border text-sm">
               {product.wholesaleRules.map((r) => (
                 <li key={r.id} className="px-3 py-2">
@@ -338,6 +343,16 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   const [regularPrice, setRegularPrice] = useState(regular ? (regular.amountCents / 100).toFixed(2) : '');
   const [salePrice, setSalePrice] = useState(sale ? (sale.amountCents / 100).toFixed(2) : '');
   const [stock, setStock] = useState(product.inventory?.quantity?.toString() ?? '');
+  const [inStock, setInStock] = useState(product.inventory?.inStock ?? true);
+  const [lowStockAmount, setLowStockAmount] = useState(
+    product.inventory?.lowStockAmount?.toString() ?? '',
+  );
+  const [backordersAllowed, setBackordersAllowed] = useState(
+    product.inventory?.backordersAllowed ?? false,
+  );
+  const [soldIndividually, setSoldIndividually] = useState(
+    product.inventory?.soldIndividually ?? false,
+  );
   const [taxStatus, setTaxStatus] = useState(product.taxStatus ?? 'taxable');
   const [taxClass, setTaxClass] = useState(product.taxClass ?? '');
 
@@ -386,6 +401,10 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             regularPrice: regularPrice ? parseFloat(regularPrice) : undefined,
             salePrice: salePrice ? parseFloat(salePrice) : undefined,
             stockQuantity: stock !== '' ? parseInt(stock, 10) : undefined,
+            inStock,
+            lowStockAmount: lowStockAmount !== '' ? parseInt(lowStockAmount, 10) : undefined,
+            backordersAllowed,
+            soldIndividually,
           };
       await api.patch(`/admin/products/${product.id}`, {
         ...storefront,
@@ -458,8 +477,9 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
       <div className="lg:col-span-2 space-y-5">
         {isQbo && (
           <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-3">
-            Name, SKU, price and stock are managed in QuickBooks and synced here. Edit the
-            storefront fields (type, brand, sale price, descriptions, visibility).
+            Name, SKU and price are managed in QuickBooks and synced here. Stock is managed
+            here and pushed to QuickBooks. Edit the storefront fields (type, brand, sale
+            price, descriptions, visibility).
           </p>
         )}
 
@@ -504,16 +524,37 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           </Section>
         ) : (
           <Section title="Pricing & inventory">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <FieldRow label={`Regular (${currency})`}>
                 <Input type="number" step="0.01" value={regularPrice} disabled={isQbo} onChange={(e) => setRegularPrice(e.target.value)} />
               </FieldRow>
               <FieldRow label={`Sale (${currency})`}>
                 <Input type="number" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
               </FieldRow>
-              <FieldRow label="Stock">
-                <Input type="number" value={stock} disabled={isQbo} onChange={(e) => setStock(e.target.value)} />
-              </FieldRow>
+            </div>
+
+            <div className="space-y-3 rounded-md border p-3">
+              <Label>Stock</Label>
+              <div className="flex items-center justify-between">
+                <Label className="font-normal">In stock</Label>
+                <Switch checked={inStock} onCheckedChange={setInStock} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <FieldRow label="Quantity">
+                  <Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} />
+                </FieldRow>
+                <FieldRow label="Low-stock threshold">
+                  <Input type="number" value={lowStockAmount} onChange={(e) => setLowStockAmount(e.target.value)} />
+                </FieldRow>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label className="font-normal">Backorders allowed</Label>
+                <Switch checked={backordersAllowed} onCheckedChange={setBackordersAllowed} />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label className="font-normal">Sold individually</Label>
+                <Switch checked={soldIndividually} onCheckedChange={setSoldIndividually} />
+              </div>
             </div>
           </Section>
         )}
@@ -749,9 +790,11 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
         </Section>
 
-        <Section title="Wholesale pricing">
-          <WholesaleRulesPanel productId={product.id} />
-        </Section>
+        {!product.hasVariant && (
+          <Section title="Wholesale pricing">
+            <WholesaleRulesPanel productId={product.id} />
+          </Section>
+        )}
       </div>
     </div>
   );

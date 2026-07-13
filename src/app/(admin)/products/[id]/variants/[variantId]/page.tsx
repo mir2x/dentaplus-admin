@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VariantEditSheet } from '@/components/products/variant-edit-sheet';
 import { VariantOffersSection } from '@/components/products/variant-offers-section';
+import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel';
 
 export default function VariantDetailPage({
   params,
@@ -125,6 +126,11 @@ export default function VariantDetailPage({
           </div>
         </section>
       </div>
+
+      <section className="rounded-lg border p-4">
+        <p className="text-sm font-medium mb-3">Wholesale pricing</p>
+        <WholesaleRulesPanel variantId={variantId} />
+      </section>
 
       <VariantOffersSection variantId={variantId} />
 

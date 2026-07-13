@@ -22,12 +22,18 @@ function describeRule(r: WholesaleRule): string {
   return `$${((r.amountCents ?? 0) / 100).toFixed(2)} off / unit`;
 }
 
-export function WholesaleRulesPanel({ productId }: { productId: string }) {
+type Owner = { productId: string; variantId?: undefined } | { productId?: undefined; variantId: string };
+
+export function WholesaleRulesPanel(props: Owner) {
   const queryClient = useQueryClient();
+  const ownerKey = props.productId ? `product:${props.productId}` : `variant:${props.variantId}`;
+  const basePath = props.productId
+    ? `/admin/products/${props.productId}/wholesale-rules`
+    : `/admin/variants/${props.variantId}/wholesale-rules`;
 
   const { data: rules } = useQuery<WholesaleRule[]>({
-    queryKey: ['wholesale-rules', productId],
-    queryFn: async () => (await api.get(`/admin/products/${productId}/wholesale-rules`)).data,
+    queryKey: ['wholesale-rules', ownerKey],
+    queryFn: async () => (await api.get(basePath)).data,
   });
   const { data: roles } = useQuery<CustomerRole[]>({
     queryKey: ['customer-roles'],
@@ -40,7 +46,7 @@ export function WholesaleRulesPanel({ productId }: { productId: string }) {
   const [value, setValue] = useState('');
 
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['wholesale-rules', productId] });
+    queryClient.invalidateQueries({ queryKey: ['wholesale-rules', ownerKey] });
 
   const create = useMutation({
     mutationFn: () => {
@@ -52,7 +58,7 @@ export function WholesaleRulesPanel({ productId }: { productId: string }) {
           ? { percentageBps: Math.round(parseFloat(value || '0') * 100) }
           : { amountCents: Math.round(parseFloat(value || '0') * 100) }),
       };
-      return api.post(`/admin/products/${productId}/wholesale-rules`, payload);
+      return api.post(basePath, payload);
     },
     onSuccess: () => {
       toast.success('Wholesale rule added');
@@ -97,7 +103,9 @@ export function WholesaleRulesPanel({ productId }: { productId: string }) {
           ))}
         </ul>
       ) : (
-        <p className="text-xs text-muted-foreground">No wholesale rules for this product.</p>
+        <p className="text-xs text-muted-foreground">
+          No wholesale rules for this {props.productId ? 'product' : 'variant'}.
+        </p>
       )}
 
       <div className="grid grid-cols-2 gap-2">

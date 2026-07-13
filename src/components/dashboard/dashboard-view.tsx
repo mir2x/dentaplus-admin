@@ -32,7 +32,7 @@ export function DashboardView() {
     { label: 'Pending credit apps', value: data?.pendingCreditApplications, icon: CreditCard, href: '/credit-applications', alert: (data?.pendingCreditApplications ?? 0) > 0 },
     { label: 'Overdue invoices', value: data?.overdueInvoices, icon: AlertTriangle, href: '/invoices', alert: (data?.overdueInvoices ?? 0) > 0 },
     { label: 'Pending QBO pushes', value: data?.pendingQboPushes, icon: RefreshCw, href: '/quickbooks', alert: (data?.pendingQboPushes ?? 0) > 0 },
-    { label: 'Out of stock', value: data?.inventory.outOfStock, sub: `${data?.inventory.lowStock ?? 0} low stock`, icon: PackageX, href: '/inventory' },
+    { label: 'Out of stock', value: data?.inventory.outOfStock, sub: `${data?.inventory.lowStock ?? 0} low stock`, icon: PackageX, href: '/products?stock=out' },
   ];
 
   return (

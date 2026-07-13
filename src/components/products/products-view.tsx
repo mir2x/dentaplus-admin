@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -38,6 +38,12 @@ const TYPE_OPTIONS = [
   { value: 'EQUIPMENT', label: 'Equipment' },
 ];
 
+const STOCK_OPTIONS = [
+  { value: 'all', label: 'All stock' },
+  { value: 'low', label: 'Low stock' },
+  { value: 'out', label: 'Out of stock' },
+];
+
 const TYPE_LABELS: Record<ProductType, string> = {
   GENERAL: 'General',
   MEDICINE: 'Medicine',
@@ -62,8 +68,10 @@ const LIMIT = 25;
 export function ProductsView() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
+  const [stock, setStock] = useState(() => searchParams.get('stock') ?? 'all');
   const [page, setPage] = useState(1);
   const [sku, setSku] = useState('');
   const [skuLoading, setSkuLoading] = useState(false);
@@ -89,11 +97,12 @@ export function ProductsView() {
   }
 
   const { data: result, isLoading } = useQuery<PaginatedResponse<Product>>({
-    queryKey: ['products', type, search, page],
+    queryKey: ['products', type, search, stock, page],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
       if (type !== 'all') params.type = type;
       if (search) params.q = search;
+      if (stock !== 'all') params.stock = stock;
       return (await api.get('/admin/products', { params })).data;
     },
   });
@@ -123,6 +132,19 @@ export function ProductsView() {
           </SelectTrigger>
           <SelectContent>
             {TYPE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={stock} onValueChange={(v) => handleFilterChange(() => setStock(v ?? 'all'))}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STOCK_OPTIONS.map((o) => (
               <SelectItem key={o.value} value={o.value}>
                 {o.label}
               </SelectItem>

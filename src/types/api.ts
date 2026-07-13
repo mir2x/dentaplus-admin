@@ -304,7 +304,8 @@ export type WholesaleDiscountType = 'FIXED' | 'PERCENTAGE';
 
 export interface WholesaleRule {
   id: string;
-  productId: string;
+  productId: string | null;
+  variantId: string | null;
   roleKey: string;
   minQuantity: number;
   discountType: WholesaleDiscountType;
