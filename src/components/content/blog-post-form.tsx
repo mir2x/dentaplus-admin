@@ -9,8 +9,8 @@ import { BlogPost } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ChevronLeft, ImageIcon, Loader2, X } from 'lucide-react';
 
 function slugify(s: string) {
@@ -125,21 +125,20 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
         </Field>
         
         <Field label="Excerpt (optional)">
-          <Textarea 
-            rows={2} 
-            value={excerpt} 
-            onChange={(e) => setExcerpt(e.target.value)} 
+          <RichTextEditor
+            value={excerpt}
+            onChange={setExcerpt}
             placeholder="A short summary of the post"
+            minHeight="5rem"
           />
         </Field>
-        
+
         <Field label="Body">
-          <Textarea 
-            rows={15} 
-            value={body} 
-            onChange={(e) => setBody(e.target.value)} 
-            placeholder="Write your post content here (supports Markdown or HTML)"
-            className="font-mono text-sm"
+          <RichTextEditor
+            value={body}
+            onChange={setBody}
+            placeholder="Write your post content here"
+            minHeight="20rem"
           />
         </Field>
 

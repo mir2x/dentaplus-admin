@@ -10,8 +10,8 @@ import { Brand, Category, ProductBadge, ProductType } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import {
   Select,
   SelectContent,
@@ -312,10 +312,10 @@ export default function NewProductPage() {
 
         {/* ── Descriptions ── */}
         <Field label="Short description">
-          <Textarea rows={2} value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} />
+          <RichTextEditor value={shortDesc} onChange={setShortDesc} minHeight="6rem" />
         </Field>
         <Field label="Full description">
-          <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
+          <RichTextEditor value={description} onChange={setDescription} minHeight="10rem" />
         </Field>
 
         {/* ── Dimensions ── */}
