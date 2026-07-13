@@ -88,7 +88,9 @@ export default function VariantDetailPage({
           <Row label="SKU" value={v.sku} />
           <Row label="Regular" value={v.regularCents != null ? formatCents(v.regularCents) : null} />
           <Row label="Sale" value={v.saleCents != null ? formatCents(v.saleCents) : null} />
-          <Row label="Qty on hand (QuickBooks)" value={v.stockQuantity?.toString()} />
+          <Row label="In stock" value={v.inventory ? (v.inventory.inStock ? 'Yes' : 'No') : '—'} />
+          <Row label="Quantity" value={v.inventory?.quantity?.toString()} />
+          <Row label="Backorders allowed" value={v.inventory ? (v.inventory.backordersAllowed ? 'Yes' : 'No') : '—'} />
           <Row label="Active" value={v.isActive ? 'Yes' : 'No'} />
         </section>
 

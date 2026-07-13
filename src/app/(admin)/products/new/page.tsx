@@ -116,8 +116,12 @@ export default function NewProductPage() {
         brand: brand || undefined,
         shortDescription: shortDesc || undefined,
         description: description || undefined,
-        regularPrice: regularPrice ? parseFloat(regularPrice) : 0,
-        salePrice: salePrice ? parseFloat(salePrice) : undefined,
+        ...(hasVariant
+          ? {}
+          : {
+              regularPrice: regularPrice ? parseFloat(regularPrice) : 0,
+              salePrice: salePrice ? parseFloat(salePrice) : undefined,
+            }),
         catalogVisibility,
         taxStatus,
         taxClass: taxClass || undefined,

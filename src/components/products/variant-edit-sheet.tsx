@@ -73,6 +73,21 @@ function VariantForm({
   );
   const [thumbnailUrl, setThumbnailUrl] = useState(isEdit ? (editing.thumbnailUrl ?? '') : '');
   const [isActive, setIsActive] = useState(isEdit ? editing.isActive : true);
+  const [inStock, setInStock] = useState(isEdit ? (editing.inventory?.inStock ?? true) : true);
+  const [quantity, setQuantity] = useState(
+    isEdit && editing.inventory?.quantity != null ? editing.inventory.quantity.toString() : '',
+  );
+  const [lowStockAmount, setLowStockAmount] = useState(
+    isEdit && editing.inventory?.lowStockAmount != null
+      ? editing.inventory.lowStockAmount.toString()
+      : '',
+  );
+  const [backordersAllowed, setBackordersAllowed] = useState(
+    isEdit ? (editing.inventory?.backordersAllowed ?? false) : false,
+  );
+  const [soldIndividually, setSoldIndividually] = useState(
+    isEdit ? (editing.inventory?.soldIndividually ?? false) : false,
+  );
   const [options, setOptions] = useState<Option[]>(
     isEdit ? editing.options.map((o) => ({ attributeName: o.attributeName, value: o.value })) : [],
   );
@@ -125,6 +140,13 @@ function VariantForm({
         thumbnailUrl: thumbnailUrl || undefined,
         isActive,
         options: options.filter((o) => o.attributeName && o.value),
+        inventory: {
+          inStock,
+          quantity: quantity !== '' ? parseInt(quantity, 10) : undefined,
+          lowStockAmount: lowStockAmount !== '' ? parseInt(lowStockAmount, 10) : undefined,
+          backordersAllowed,
+          soldIndividually,
+        },
       };
       return isEdit
         ? api.patch(`/admin/variants/${editing.id}`, payload)
@@ -165,6 +187,30 @@ function VariantForm({
           <Field label="Sale ($)">
             <Input type="number" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
           </Field>
+        </div>
+
+        <div className="space-y-3 rounded-md border p-3">
+          <Label>Stock</Label>
+          <div className="flex items-center justify-between">
+            <Label className="font-normal">In stock</Label>
+            <Switch checked={inStock} onCheckedChange={setInStock} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Quantity">
+              <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            </Field>
+            <Field label="Low-stock threshold">
+              <Input type="number" value={lowStockAmount} onChange={(e) => setLowStockAmount(e.target.value)} />
+            </Field>
+          </div>
+          <div className="flex items-center justify-between">
+            <Label className="font-normal">Backorders allowed</Label>
+            <Switch checked={backordersAllowed} onCheckedChange={setBackordersAllowed} />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label className="font-normal">Sold individually</Label>
+            <Switch checked={soldIndividually} onCheckedChange={setSoldIndividually} />
+          </div>
         </div>
 
         <Field label="Thumbnail">

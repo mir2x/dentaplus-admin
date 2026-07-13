@@ -165,14 +165,23 @@ function ProductView({ product }: { product: ProductDetail }) {
           <Row label="Tax class" value={product.taxClass} />
         </Section>
 
-        <Section title="Pricing & inventory">
-          <Row label="Regular" value={regular ? formatCents(regular.amountCents, currency) : null} />
-          <Row label="Sale" value={sale ? formatCents(sale.amountCents, currency) : null} />
-          <Row label="In stock" value={product.inventory ? (product.inventory.inStock ? 'Yes' : 'No') : '—'} />
-          <Row label="Quantity" value={product.inventory?.quantity?.toString()} />
-          <Row label="Low-stock threshold" value={product.inventory?.lowStockAmount?.toString()} />
-          <Row label="Backorders allowed" value={product.inventory ? (product.inventory.backordersAllowed ? 'Yes' : 'No') : '—'} />
-        </Section>
+        {product.hasVariant ? (
+          <Section title="Pricing & inventory">
+            <p className="text-xs text-muted-foreground">
+              Managed per-variant (see Variants below).
+            </p>
+            <Row label="Price range" value={variantPriceRangeLabel(product.variants, currency)} />
+          </Section>
+        ) : (
+          <Section title="Pricing & inventory">
+            <Row label="Regular" value={regular ? formatCents(regular.amountCents, currency) : null} />
+            <Row label="Sale" value={sale ? formatCents(sale.amountCents, currency) : null} />
+            <Row label="In stock" value={product.inventory ? (product.inventory.inStock ? 'Yes' : 'No') : '—'} />
+            <Row label="Quantity" value={product.inventory?.quantity?.toString()} />
+            <Row label="Low-stock threshold" value={product.inventory?.lowStockAmount?.toString()} />
+            <Row label="Backorders allowed" value={product.inventory ? (product.inventory.backordersAllowed ? 'Yes' : 'No') : '—'} />
+          </Section>
+        )}
 
         <Section title="Descriptions">
           <div className="space-y-2 text-sm">
@@ -208,10 +217,10 @@ function ProductView({ product }: { product: ProductDetail }) {
           </div>
         </Section>
 
-        {product.attributes.length > 0 && (
+        {!product.hasVariant && product.attributes.length > 0 && (
           <Section title="Attributes">
             {product.attributes.map((a) => (
-              <Row key={a.name} label={a.name} value={a.values.join(', ')} />
+              <Row key={a.id} label={a.attributeName} value={a.value} />
             ))}
           </Section>
         )}
@@ -365,19 +374,24 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
         shortDescription: shortDesc || undefined,
         description: description || undefined,
         brand,
-        salePrice: salePrice ? parseFloat(salePrice) : undefined,
         taxStatus,
         taxClass: taxClass || undefined,
       };
-      const core = isQbo
+      const identity = isQbo
+        ? {}
+        : { name, sku: product.hasVariant ? undefined : sku || undefined };
+      const pricing = product.hasVariant
         ? {}
         : {
-            name,
-            sku: sku || undefined,
             regularPrice: regularPrice ? parseFloat(regularPrice) : undefined,
+            salePrice: salePrice ? parseFloat(salePrice) : undefined,
             stockQuantity: stock !== '' ? parseInt(stock, 10) : undefined,
           };
-      await api.patch(`/admin/products/${product.id}`, { ...storefront, ...core });
+      await api.patch(`/admin/products/${product.id}`, {
+        ...storefront,
+        ...identity,
+        ...pricing,
+      });
       await api.put(`/admin/products/${product.id}/categories`, { categoryIds });
       await api.put(`/admin/products/${product.id}/tags`, { tagIds });
     },
@@ -482,19 +496,27 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           </div>
         </Section>
 
-        <Section title="Pricing & inventory">
-          <div className="grid grid-cols-3 gap-3">
-            <FieldRow label={`Regular (${currency})`}>
-              <Input type="number" step="0.01" value={regularPrice} disabled={isQbo} onChange={(e) => setRegularPrice(e.target.value)} />
-            </FieldRow>
-            <FieldRow label={`Sale (${currency})`}>
-              <Input type="number" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
-            </FieldRow>
-            <FieldRow label="Stock">
-              <Input type="number" value={stock} disabled={isQbo} onChange={(e) => setStock(e.target.value)} />
-            </FieldRow>
-          </div>
-        </Section>
+        {product.hasVariant ? (
+          <Section title="Pricing & inventory">
+            <p className="text-xs text-muted-foreground">
+              Managed per-variant — edit price and stock on each variant below.
+            </p>
+          </Section>
+        ) : (
+          <Section title="Pricing & inventory">
+            <div className="grid grid-cols-3 gap-3">
+              <FieldRow label={`Regular (${currency})`}>
+                <Input type="number" step="0.01" value={regularPrice} disabled={isQbo} onChange={(e) => setRegularPrice(e.target.value)} />
+              </FieldRow>
+              <FieldRow label={`Sale (${currency})`}>
+                <Input type="number" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
+              </FieldRow>
+              <FieldRow label="Stock">
+                <Input type="number" value={stock} disabled={isQbo} onChange={(e) => setStock(e.target.value)} />
+              </FieldRow>
+            </div>
+          </Section>
+        )}
 
         <Section title="Descriptions">
           <FieldRow label="Short description">
@@ -772,6 +794,22 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       {children}
     </section>
   );
+}
+
+function variantPriceRangeLabel(
+  variants: ProductDetail['variants'],
+  currency: string,
+): string | null {
+  const cents = variants
+    .filter((v) => v.isActive)
+    .map((v) => v.saleCents ?? v.regularCents)
+    .filter((c): c is number => c != null);
+  if (!cents.length) return null;
+  const min = Math.min(...cents);
+  const max = Math.max(...cents);
+  return min === max
+    ? formatCents(min, currency)
+    : `${formatCents(min, currency)} – ${formatCents(max, currency)}`;
 }
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {

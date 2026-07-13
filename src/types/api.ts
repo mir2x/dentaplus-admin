@@ -189,12 +189,19 @@ export interface ProductVariantDetail {
   name: string | null;
   regularCents: number | null;
   saleCents: number | null;
-  stockQuantity: number | null;
   thumbnailUrl?: string | null;
   quickbooksItemId?: string | null;
   quickbooksSyncedAt?: string | null;
   isActive: boolean;
   options: { attributeName: string; value: string }[];
+  inventory: {
+    id: string;
+    inStock: boolean;
+    quantity: number | null;
+    lowStockAmount: number | null;
+    backordersAllowed: boolean;
+    soldIndividually: boolean;
+  } | null;
 }
 
 export interface Attribute {
@@ -227,7 +234,7 @@ export interface ProductDetail extends Product {
       }
     | null;
   tags: { tag: { id: string; name: string; slug: string } }[];
-  attributes: { name: string; values: string[]; visible: boolean; global: boolean }[];
+  attributes: { id: string; productId: string; attributeName: string; value: string }[];
   variants: ProductVariantDetail[];
   wholesaleRules: WholesaleRule[];
   badges: { badge: ProductBadge; imageUrl: string | null }[];

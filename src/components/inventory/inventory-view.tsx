@@ -24,16 +24,25 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 
+interface InventoryOwnerProduct {
+  id: string;
+  name: string;
+  sku: string | null;
+  published: boolean;
+  quickbooksItemId: string | null;
+}
+
 interface InventoryRow {
   id: string;
   quantity: number | null;
   inStock: boolean;
-  product: {
+  kind: 'product' | 'variant';
+  product: InventoryOwnerProduct | null;
+  variant: {
     id: string;
-    name: string;
     sku: string | null;
-    published: boolean;
-    quickbooksItemId: string | null;
+    name: string | null;
+    product: InventoryOwnerProduct;
   } | null;
 }
 
@@ -104,25 +113,33 @@ export function InventoryView() {
                 </TableRow>
               ))
             ) : result?.data.length ? (
-              result.data.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="font-medium">{row.product?.name ?? '—'}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {row.product?.sku ?? '—'}
-                  </TableCell>
-                  <TableCell className="text-right">{row.quantity ?? '—'}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={row.inStock ? 'default' : 'destructive'}>
-                      {row.inStock ? 'Yes' : 'No'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={row.product?.published ? 'default' : 'secondary'}>
-                      {row.product?.published ? 'Live' : 'Draft'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))
+              result.data.map((row) => {
+                const owner = row.product ?? row.variant?.product ?? null;
+                const label =
+                  row.kind === 'variant' && row.variant
+                    ? `${owner?.name ?? '—'} — ${row.variant.name ?? row.variant.sku ?? 'Variant'}`
+                    : (owner?.name ?? '—');
+                const sku = row.kind === 'variant' ? row.variant?.sku : owner?.sku;
+                return (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium">{label}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {sku ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-right">{row.quantity ?? '—'}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={row.inStock ? 'default' : 'destructive'}>
+                        {row.inStock ? 'Yes' : 'No'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={owner?.published ? 'default' : 'secondary'}>
+                        {owner?.published ? 'Live' : 'Draft'}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
