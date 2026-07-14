@@ -95,7 +95,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <button
-            onClick={() => router.push('/products')}
+            onClick={() => router.back()}
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
           >
             <ArrowLeft className="size-3.5" /> All products

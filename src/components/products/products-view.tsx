@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -68,13 +68,25 @@ const LIMIT = 25;
 export function ProductsView() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
   const [stock, setStock] = useState(() => searchParams.get('stock') ?? 'all');
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => Number(searchParams.get('page')) || 1);
   const [sku, setSku] = useState('');
   const [skuLoading, setSkuLoading] = useState(false);
+
+  // Keep page/stock in the URL so navigating to a product and back (or using
+  // browser back) restores the list where the admin left it, instead of
+  // resetting to page 1.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (stock !== 'all') params.set('stock', stock);
+    if (page !== 1) params.set('page', String(page));
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [stock, page, pathname, router]);
 
   function handleFilterChange(fn: () => void) {
     fn();
