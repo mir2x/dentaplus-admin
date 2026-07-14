@@ -32,9 +32,15 @@ interface Settings {
   invoiceDueDays: number;
   backOrderReplyDays: number;
   cataloguePdfUrl: string | null;
+  siteLogoUrl: string | null;
+  faviconUrl: string | null;
+  siteTitle: string | null;
 }
 
-type NumericSettingKeys = keyof Omit<Settings, 'cataloguePdfUrl'>;
+type NumericSettingKeys = keyof Omit<
+  Settings,
+  'cataloguePdfUrl' | 'siteLogoUrl' | 'faviconUrl' | 'siteTitle'
+>;
 
 const FIELDS: { key: NumericSettingKeys; label: string; hint: string }[] = [
   { key: 'gstDivisor', label: 'GST divisor', hint: 'Tax extracted from GST-inclusive totals (11 = 10% GST)' },
@@ -47,7 +53,11 @@ const FIELDS: { key: NumericSettingKeys; label: string; hint: string }[] = [
 export function SettingsView() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const logoFileRef = useRef<HTMLInputElement>(null);
+  const faviconFileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [emailRange, setEmailRange] = useState<(typeof EMAIL_EXPORT_RANGES)[number]['value']>('month');
   const [exportingEmails, setExportingEmails] = useState(false);
   // Edits overlay the fetched values, so we never copy server state into an effect.
@@ -86,6 +96,48 @@ export function SettingsView() {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  async function handleLogoUpload(file: File) {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed');
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('folder', 'branding');
+      const { data: uploaded } = await api.post('/admin/upload', form);
+      setEdits((prev) => ({ ...prev, siteLogoUrl: uploaded.url }));
+      toast.success('Logo uploaded. Remember to save settings!');
+    } catch {
+      toast.error('Upload failed');
+    } finally {
+      setUploadingLogo(false);
+      if (logoFileRef.current) logoFileRef.current.value = '';
+    }
+  }
+
+  async function handleFaviconUpload(file: File) {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed');
+      return;
+    }
+    setUploadingFavicon(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('folder', 'branding');
+      const { data: uploaded } = await api.post('/admin/upload', form);
+      setEdits((prev) => ({ ...prev, faviconUrl: uploaded.url }));
+      toast.success('Favicon uploaded. Remember to save settings!');
+    } catch {
+      toast.error('Upload failed');
+    } finally {
+      setUploadingFavicon(false);
+      if (faviconFileRef.current) faviconFileRef.current.value = '';
     }
   }
 
@@ -162,6 +214,102 @@ export function SettingsView() {
               />
             </div>
             <p className="text-xs text-muted-foreground">Upload the catalogue PDF (updates the URL field directly)</p>
+          </div>
+
+          <Button disabled={save.isPending} onClick={() => save.mutate(merged)}>
+            {save.isPending ? 'Saving…' : 'Save settings'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Site branding</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="siteTitle">Tab title</Label>
+            <Input
+              id="siteTitle"
+              value={merged.siteTitle ?? ''}
+              placeholder="Dental Supplier & Wholesalers in Australia - DentaPlus"
+              onChange={(e) => setEdits((prev) => ({ ...prev, siteTitle: e.target.value || null }))}
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown in the browser tab. Leave blank to use the storefront default.
+            </p>
+          </div>
+
+          <div className="space-y-1.5 pt-2 border-t">
+            <Label>Logo</Label>
+            <div className="flex items-center gap-4">
+              {merged.siteLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={merged.siteLogoUrl} alt="Site logo" className="h-8 w-auto rounded border bg-muted p-1" />
+              ) : (
+                <span className="text-sm text-muted-foreground">Using default logo</span>
+              )}
+              <Button variant="outline" size="sm" onClick={() => logoFileRef.current?.click()} disabled={uploadingLogo}>
+                {uploadingLogo ? 'Uploading...' : 'Upload logo'}
+              </Button>
+              {merged.siteLogoUrl && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEdits((prev) => ({ ...prev, siteLogoUrl: null }))}
+                >
+                  Reset to default
+                </Button>
+              )}
+              <input
+                ref={logoFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.[0]) handleLogoUpload(e.target.files[0]);
+                }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Shown in the storefront header next to the site name.
+            </p>
+          </div>
+
+          <div className="space-y-1.5 pt-2 border-t">
+            <Label>Favicon</Label>
+            <div className="flex items-center gap-4">
+              {merged.faviconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={merged.faviconUrl} alt="Favicon" className="size-8 rounded border bg-muted p-1" />
+              ) : (
+                <span className="text-sm text-muted-foreground">Using default favicon</span>
+              )}
+              <Button variant="outline" size="sm" onClick={() => faviconFileRef.current?.click()} disabled={uploadingFavicon}>
+                {uploadingFavicon ? 'Uploading...' : 'Upload favicon'}
+              </Button>
+              {merged.faviconUrl && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEdits((prev) => ({ ...prev, faviconUrl: null }))}
+                >
+                  Reset to default
+                </Button>
+              )}
+              <input
+                ref={faviconFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.[0]) handleFaviconUpload(e.target.files[0]);
+                }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Shown as the browser tab icon. Square images work best.
+            </p>
           </div>
 
           <Button disabled={save.isPending} onClick={() => save.mutate(merged)}>

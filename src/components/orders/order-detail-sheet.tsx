@@ -205,9 +205,9 @@ export function OrderDetailSheet({ order, onClose }: Props) {
                     <SelectTrigger>
                       <SelectValue placeholder="Select new status…" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="p-1.5">
                       {nextOptions.map((s) => (
-                        <SelectItem key={s} value={s}>
+                        <SelectItem key={s} value={s} className="px-3 py-2">
                           {STATUS_LABELS[s]}
                         </SelectItem>
                       ))}

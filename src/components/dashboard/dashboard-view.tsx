@@ -26,8 +26,8 @@ export function DashboardView() {
 
   const cards = [
     { label: 'Gross sales (MTD)', value: data && formatMoney(data.grossSalesMtd), icon: DollarSign },
-    { label: 'Orders today', value: data?.ordersToday, sub: `${data?.ordersMtd ?? 0} this month`, icon: ShoppingCart },
-    { label: 'New customers (MTD)', value: data?.newCustomersMtd, icon: UserPlus },
+    { label: 'Orders today', value: data?.ordersToday, sub: `${data?.ordersMtd ?? 0} this month`, icon: ShoppingCart, href: '/orders' },
+    { label: 'New customers (MTD)', value: data?.newCustomersMtd, icon: UserPlus, href: '/customers' },
     { label: 'AR outstanding', value: data && formatMoney(data.accountsReceivable.outstanding), icon: Landmark, href: '/accounts-receivable' },
     { label: 'Pending credit apps', value: data?.pendingCreditApplications, icon: CreditCard, href: '/credit-applications', alert: (data?.pendingCreditApplications ?? 0) > 0 },
     { label: 'Overdue invoices', value: data?.overdueInvoices, icon: AlertTriangle, href: '/invoices', alert: (data?.overdueInvoices ?? 0) > 0 },

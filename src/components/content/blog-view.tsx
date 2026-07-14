@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { FolderCog, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { BlogPost, PaginatedResponse } from '@/types/api';
@@ -19,9 +19,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDate } from '@/lib/format';
+import { BlogCategorySheet } from './blog-category-sheet';
 
 export function BlogView() {
   const [search, setSearch] = useState('');
+  const [manageCategories, setManageCategories] = useState(false);
   const router = useRouter();
 
   const { data, isLoading } = useQuery<PaginatedResponse<BlogPost>>({
@@ -42,7 +44,10 @@ export function BlogView() {
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
         />
-        <Button className="ml-auto" onClick={() => router.push('/blog/posts/new')}>
+        <Button variant="outline" className="ml-auto" onClick={() => setManageCategories(true)}>
+          <FolderCog className="size-4" /> Manage categories
+        </Button>
+        <Button onClick={() => router.push('/blog/posts/new')}>
           <Plus className="size-4" /> New post
         </Button>
       </div>
@@ -53,6 +58,7 @@ export function BlogView() {
             <TableRow>
               <TableHead>Title</TableHead>
               <TableHead>Slug</TableHead>
+              <TableHead>Categories</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-center">Status</TableHead>
             </TableRow>
@@ -61,7 +67,7 @@ export function BlogView() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 4 }).map((_, j) => (
+                  {Array.from({ length: 5 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -71,8 +77,25 @@ export function BlogView() {
             ) : data?.data.length ? (
               data.data.map((p) => (
                 <TableRow key={p.id} className="cursor-pointer" onClick={() => router.push(`/blog/posts/${p.id}`)}>
-                  <TableCell className="font-medium max-w-72 truncate">{p.title}</TableCell>
+                  <TableCell className="font-medium max-w-72">
+                    <div className="flex items-center gap-2">
+                      {p.thumbnailUrl ?? p.featuredImageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.thumbnailUrl ?? p.featuredImageUrl ?? undefined}
+                          alt=""
+                          className="size-8 shrink-0 rounded border object-cover"
+                        />
+                      ) : (
+                        <div className="size-8 shrink-0 rounded border bg-muted" />
+                      )}
+                      <div className="truncate">{p.title}</div>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{p.slug}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm max-w-48 truncate">
+                    {p.categories?.length ? p.categories.map((c) => c.name).join(', ') : '—'}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {formatDate(p.createdAt)}
                   </TableCell>
@@ -85,7 +108,7 @@ export function BlogView() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                   No posts
                 </TableCell>
               </TableRow>
@@ -93,6 +116,8 @@ export function BlogView() {
           </TableBody>
         </Table>
       </div>
+
+      <BlogCategorySheet open={manageCategories} onOpenChange={setManageCategories} />
     </div>
   );
 }

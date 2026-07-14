@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { BlogPost } from '@/types/api';
+import { BlogCategory, BlogPost } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,19 +27,38 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [excerpt, setExcerpt] = useState(isEdit ? (post.excerpt ?? '') : '');
   const [body, setBody] = useState(isEdit ? post.body : '');
-  const [imageUrl, setImageUrl] = useState(isEdit ? (post.featuredImageUrl ?? '') : '');
+  const [thumbnailUrl, setThumbnailUrl] = useState(isEdit ? (post.thumbnailUrl ?? '') : '');
+  const [featuredImageUrl, setFeaturedImageUrl] = useState(
+    isEdit ? (post.featuredImageUrl ?? '') : '',
+  );
+  const [tagsInput, setTagsInput] = useState(isEdit ? (post.tags ?? []).join(', ') : '');
+  const [categoryIds, setCategoryIds] = useState<string[]>(
+    isEdit ? (post.categories ?? []).map((c) => c.id) : [],
+  );
   const [isPublished, setIsPublished] = useState(isEdit ? post.isPublished : false);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [featuredUploading, setFeaturedUploading] = useState(false);
+
+  const { data: categories } = useQuery<BlogCategory[]>({
+    queryKey: ['blog-categories'],
+    queryFn: async () => (await api.get('/admin/blog/categories')).data,
+  });
 
   const save = useMutation({
     mutationFn: () => {
+      const tags = tagsInput
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
       const payload = {
         title,
         slug: slug || slugify(title),
         excerpt: excerpt || undefined,
         body,
-        featuredImageUrl: imageUrl || undefined,
+        thumbnailUrl: thumbnailUrl || undefined,
+        featuredImageUrl: featuredImageUrl || undefined,
+        tags,
+        categoryIds,
         isPublished,
       };
       return isEdit
@@ -64,33 +83,7 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
     onError: () => toast.error('Delete failed'),
   });
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'banners');
-
-      const res = await api.post<{ key: string; url: string }>('/admin/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      setImageUrl(res.data.url);
-      toast.success('Image uploaded successfully');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to upload image');
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
+  const isUploading = thumbnailUploading || featuredUploading;
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 pb-12">
@@ -112,7 +105,7 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
             placeholder="Enter post title"
           />
         </Field>
-        
+
         <Field label="Slug">
           <Input
             value={slug}
@@ -123,7 +116,7 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
             placeholder="my-post-slug"
           />
         </Field>
-        
+
         <Field label="Excerpt (optional)">
           <RichTextEditor
             value={excerpt}
@@ -142,48 +135,74 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
           />
         </Field>
 
+        <Field label="Thumbnail">
+          <ImageUploadField
+            value={thumbnailUrl}
+            onChange={setThumbnailUrl}
+            uploading={thumbnailUploading}
+            setUploading={setThumbnailUploading}
+            uploadFolder="blog"
+            placeholder="Click to upload thumbnail"
+          />
+          <p className="text-xs text-muted-foreground">
+            Shown on the blog list and post cards.
+          </p>
+        </Field>
+
         <Field label="Featured image">
-          <div className="flex flex-col gap-4">
-            {imageUrl ? (
-              <div className="relative overflow-hidden rounded-lg border aspect-[2/1] bg-muted/50 max-w-lg">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imageUrl} alt="Featured" className="w-full h-full object-cover" />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 rounded-full"
-                  onClick={() => setImageUrl('')}
-                  title="Remove image"
+          <ImageUploadField
+            value={featuredImageUrl}
+            onChange={setFeaturedImageUrl}
+            uploading={featuredUploading}
+            setUploading={setFeaturedUploading}
+            uploadFolder="blog"
+            placeholder="Click to upload featured image"
+          />
+          <p className="text-xs text-muted-foreground">
+            Shown at the top of the individual post page.
+          </p>
+        </Field>
+
+        <Field label="Tags">
+          <Input
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            placeholder="e.g. oral health, tips, whitening"
+          />
+          <p className="text-xs text-muted-foreground">
+            Comma-separated. Each value becomes its own tag.
+          </p>
+        </Field>
+
+        <Field label="Categories">
+          {categories?.length ? (
+            <div className="rounded-md border divide-y max-h-48 overflow-y-auto">
+              {categories.map((category) => (
+                <label
+                  key={category.id}
+                  className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/40"
                 >
-                  <X className="size-4" />
-                </Button>
-              </div>
-            ) : (
-              <div 
-                className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-center bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer max-w-lg"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {isUploading ? (
-                  <Loader2 className="size-8 text-muted-foreground animate-spin" />
-                ) : (
-                  <ImageIcon className="size-8 text-muted-foreground" />
-                )}
-                <div className="text-sm font-medium">
-                  {isUploading ? 'Uploading...' : 'Click to upload featured image'}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Supports JPEG, PNG, WEBP up to 10MB
-                </div>
-              </div>
-            )}
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              onChange={handleFileUpload}
-            />
-          </div>
+                  <input
+                    type="checkbox"
+                    className="accent-primary"
+                    checked={categoryIds.includes(category.id)}
+                    onChange={() =>
+                      setCategoryIds((cur) =>
+                        cur.includes(category.id)
+                          ? cur.filter((id) => id !== category.id)
+                          : [...cur, category.id],
+                      )
+                    }
+                  />
+                  {category.name}
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              No categories yet — manage them from the blog list page.
+            </p>
+          )}
         </Field>
 
         <div className="flex items-center gap-4 rounded-lg border p-4">
@@ -214,6 +233,96 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ImageUploadField({
+  value,
+  onChange,
+  uploading,
+  setUploading,
+  uploadFolder,
+  placeholder,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+  uploading: boolean;
+  setUploading: (uploading: boolean) => void;
+  uploadFolder: string;
+  placeholder: string;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', uploadFolder);
+
+      const res = await api.post<{ key: string; url: string }>('/admin/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      onChange(res.data.url);
+      toast.success('Image uploaded successfully');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to upload image');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {value ? (
+        <div className="relative overflow-hidden rounded-lg border aspect-[2/1] bg-muted/50 max-w-lg">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={value} alt="" className="w-full h-full object-cover" />
+          <Button
+            variant="destructive"
+            size="icon"
+            className="absolute top-2 right-2 rounded-full"
+            onClick={() => onChange('')}
+            title="Remove image"
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+      ) : (
+        <div
+          className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-center bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer max-w-lg"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {uploading ? (
+            <Loader2 className="size-8 text-muted-foreground animate-spin" />
+          ) : (
+            <ImageIcon className="size-8 text-muted-foreground" />
+          )}
+          <div className="text-sm font-medium">
+            {uploading ? 'Uploading...' : placeholder}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Supports JPEG, PNG, WEBP up to 10MB
+          </div>
+        </div>
+      )}
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        onChange={handleFileUpload}
+      />
     </div>
   );
 }

@@ -679,6 +679,15 @@ export interface Offer {
 
 // ── Content & support ─────────────────────────────────────────────────────────
 
+export interface BlogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { posts: number };
+}
+
 export interface BlogPost {
   id: string;
   title: string;
@@ -686,10 +695,13 @@ export interface BlogPost {
   excerpt: string | null;
   body: string;
   featuredImageUrl: string | null;
+  thumbnailUrl: string | null;
+  tags: string[];
   isPublished: boolean;
   publishedAt: string | null;
   createdAt: string;
   author?: { firstName: string | null; lastName: string | null } | null;
+  categories: { id: string; name: string; slug: string }[];
 }
 
 export interface FaqItem {
