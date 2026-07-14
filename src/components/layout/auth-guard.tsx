@@ -12,7 +12,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
 
-  const firstAllowedPage = user?.allowedPages[0];
+  const firstAllowedPage = user?.allowedPages?.[0];
   const allowed = hasPageAccess(user?.allowedPages ?? [], pathname);
 
   useEffect(() => {
