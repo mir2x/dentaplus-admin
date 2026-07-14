@@ -93,6 +93,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     ? balance.bucket0 + balance.bucket30 + balance.bucket60 + balance.bucket90 + balance.bucket120 + balance.bucket120plus
     : 0;
   const hasWholesale = c.roles.some((r) => r.role.key === 'wholesale_customer');
+  const hasLoyal = c.roles.some((r) => r.role.key === 'loyal_customer');
 
   return (
     <div className="space-y-6">
@@ -193,6 +194,11 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 {!hasWholesale && (
                   <Button size="sm" variant="outline" onClick={() => addRole.mutate('wholesale_customer')}>
                     Mark as wholesale
+                  </Button>
+                )}
+                {!hasLoyal && (
+                  <Button size="sm" variant="outline" onClick={() => addRole.mutate('loyal_customer')}>
+                    Mark as loyal customer
                   </Button>
                 )}
                 <Select onValueChange={(v) => v && addRole.mutate(v as string)}>

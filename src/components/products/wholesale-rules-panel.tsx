@@ -79,8 +79,6 @@ export function WholesaleRulesPanel(props: Owner) {
 
   return (
     <div className="space-y-3">
-      <Label>Wholesale / tiered pricing</Label>
-
       {rules?.length ? (
         <ul className="divide-y rounded-md border text-sm">
           {rules.map((r) => (
