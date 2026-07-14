@@ -362,6 +362,15 @@ export interface Customer {
   } | null;
 }
 
+export interface StaffMember {
+  id: string;
+  email: string;
+  displayName: string | null;
+  isActive: boolean;
+  allowedPages: string[];
+  createdAt: string;
+}
+
 export interface CustomerAddress {
   id: string;
   type: 'BILLING' | 'SHIPPING';
