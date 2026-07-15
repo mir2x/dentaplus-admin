@@ -36,8 +36,13 @@ interface TopProductsResponse {
   }[];
 }
 
+function toDateParam(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 export function AnalyticsView() {
   const [preset, setPreset] = useState<DatePreset>('30d');
+  const [customDays, setCustomDays] = useState<number | null>(null);
   const [customersPage, setCustomersPage] = useState(1);
   const [wholesalePage, setWholesalePage] = useState(1);
 
@@ -47,30 +52,50 @@ export function AnalyticsView() {
     setWholesalePage(1);
   }
 
+  function handleCustomDays(days: number) {
+    setCustomDays(days);
+    setCustomersPage(1);
+    setWholesalePage(1);
+  }
+
+  const dateParams =
+    preset === 'custom' && customDays
+      ? (() => {
+          const to = new Date();
+          const from = new Date();
+          from.setDate(from.getDate() - (customDays - 1));
+          return { from: toDateParam(from), to: toDateParam(to) };
+        })()
+      : { preset };
+
+  const dateKey = preset === 'custom' ? `custom-${customDays}` : preset;
+
   const { data: summary, isLoading: summaryLoading } = useQuery<AnalyticsSummary>({
-    queryKey: ['analytics-summary', preset],
-    queryFn: () => api.get('/admin/analytics/summary', { params: { preset } }).then((r) => r.data),
+    queryKey: ['analytics-summary', dateKey],
+    queryFn: () => api.get('/admin/analytics/summary', { params: dateParams }).then((r) => r.data),
   });
 
   const { data: trend, isLoading: trendLoading } = useQuery<TrendPoint[]>({
-    queryKey: ['analytics-trend', preset],
-    queryFn: () => api.get('/admin/analytics/trend', { params: { preset } }).then((r) => r.data),
+    queryKey: ['analytics-trend', dateKey],
+    queryFn: () => api.get('/admin/analytics/trend', { params: dateParams }).then((r) => r.data),
   });
 
   const { data: topProducts, isLoading: topProductsLoading } = useQuery<TopProductsResponse>({
-    queryKey: ['analytics-top-products', preset],
+    queryKey: ['analytics-top-products', dateKey],
     queryFn: () =>
-      api.get('/admin/analytics/top-products', { params: { preset, limit: 10 } }).then((r) => r.data),
+      api
+        .get('/admin/analytics/top-products', { params: { ...dateParams, limit: 10 } })
+        .then((r) => r.data),
   });
 
   const { data: topCustomers, isLoading: topCustomersLoading } = useQuery<
     PaginatedResponse<TopCustomer>
   >({
-    queryKey: ['analytics-top-customers', preset, customersPage],
+    queryKey: ['analytics-top-customers', dateKey, customersPage],
     queryFn: () =>
       api
         .get('/admin/analytics/top-customers', {
-          params: { preset, page: customersPage, limit: 10 },
+          params: { ...dateParams, page: customersPage, limit: 10 },
         })
         .then((r) => r.data),
   });
@@ -78,24 +103,24 @@ export function AnalyticsView() {
   const { data: wholesale, isLoading: wholesaleLoading } = useQuery<
     PaginatedResponse<WholesaleCustomer>
   >({
-    queryKey: ['analytics-wholesale', preset, wholesalePage],
+    queryKey: ['analytics-wholesale', dateKey, wholesalePage],
     queryFn: () =>
       api
         .get('/admin/analytics/wholesale', {
-          params: { preset, page: wholesalePage, limit: 10 },
+          params: { ...dateParams, page: wholesalePage, limit: 10 },
         })
         .then((r) => r.data),
   });
 
   const { data: coupons, isLoading: couponsLoading } = useQuery<CouponUsage[]>({
-    queryKey: ['analytics-coupons', preset],
+    queryKey: ['analytics-coupons', dateKey],
     queryFn: () =>
-      api.get('/admin/analytics/coupons', { params: { preset } }).then((r) => r.data),
+      api.get('/admin/analytics/coupons', { params: dateParams }).then((r) => r.data),
   });
 
   return (
     <div className="space-y-6">
-      <DateFilterBar preset={preset} onChange={handlePresetChange} />
+      <DateFilterBar preset={preset} onChange={handlePresetChange} onCustomDays={handleCustomDays} />
       <SummaryCards data={summary} isLoading={summaryLoading} />
       <TrendChart data={trend} isLoading={trendLoading} />
       <div className="grid gap-6 lg:grid-cols-2">

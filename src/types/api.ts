@@ -745,7 +745,7 @@ export interface DashboardSummary {
   accountsReceivable: { outstanding: number; aging: AgingBuckets };
 }
 
-export type DatePreset = 'today' | '7d' | '30d' | 'quarter' | 'ytd' | 'last_year';
+export type DatePreset = 'today' | '7d' | '30d' | 'quarter' | 'ytd' | 'last_year' | 'custom';
 
 export interface AnalyticsSummary {
   orderCount: number;

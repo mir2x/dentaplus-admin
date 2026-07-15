@@ -10,11 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 
 interface StaticBannerSlide {
   imageUrl: string;
   alt: string;
   title: string;
+  description: string;
   ctaLabel: string;
   ctaHref: string;
 }
@@ -27,6 +29,7 @@ const EMPTY_SLIDE: StaticBannerSlide = {
   imageUrl: '',
   alt: '',
   title: '',
+  description: '',
   ctaLabel: '',
   ctaHref: '',
 };
@@ -55,7 +58,7 @@ export function StaticBannerView() {
 
   if (isLoading || !data) return <Skeleton className="h-72 w-full max-w-2xl" />;
 
-  const currentSlides = slides ?? data.slides;
+  const currentSlides = (slides ?? data.slides).map((s) => ({ ...s, description: s.description ?? '' }));
   const incomplete = currentSlides.some((s) => !s.imageUrl);
 
   function updateSlide(index: number, patch: Partial<StaticBannerSlide>) {
@@ -113,6 +116,15 @@ export function StaticBannerView() {
                       value={slide.title}
                       onChange={(e) => updateSlide(i, { title: e.target.value })}
                       placeholder="Professional Dental Supplies for Modern Practices"
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    <Label>Description</Label>
+                    <Textarea
+                      rows={2}
+                      value={slide.description}
+                      onChange={(e) => updateSlide(i, { description: e.target.value })}
+                      placeholder="Short supporting text shown under the title"
                     />
                   </div>
                   <div className="space-y-1">
