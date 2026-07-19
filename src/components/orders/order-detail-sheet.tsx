@@ -163,7 +163,7 @@ export function OrderDetailSheet({ order, onClose }: Props) {
             <Separator className="mb-4" />
 
             {/* Addresses */}
-            <section className="grid grid-cols-2 gap-4 text-sm mb-4">
+            <section className="grid grid-cols-1 gap-4 text-sm mb-4 sm:grid-cols-2">
               {billing && (
                 <div>
                   <p className="font-medium mb-1">Billing</p>

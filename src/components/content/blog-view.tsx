@@ -37,14 +37,14 @@ export function BlogView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Input
           placeholder="Search title or slug…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
         />
-        <Button variant="outline" className="ml-auto" onClick={() => setManageCategories(true)}>
+        <Button variant="outline" className="sm:ml-auto" onClick={() => setManageCategories(true)}>
           <FolderCog className="size-4" /> Manage categories
         </Button>
         <Button onClick={() => router.push('/blog/posts/new')}>

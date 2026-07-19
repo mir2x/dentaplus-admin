@@ -92,7 +92,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <button
             onClick={() => router.back()}
@@ -499,7 +499,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           <FieldRow label="GTIN / EAN / Barcode">
             <Input value={gtin} onChange={(e) => setGtin(e.target.value)} />
           </FieldRow>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FieldRow label="Type">
               <Select value={type} onValueChange={(v) => setType((v ?? 'GENERAL') as ProductType)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -524,7 +524,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           </Section>
         ) : (
           <Section title="Pricing & inventory">
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
               <FieldRow label={`Regular (${currency})`}>
                 <Input type="number" step="0.01" value={regularPrice} disabled={isQbo} onChange={(e) => setRegularPrice(e.target.value)} />
               </FieldRow>
@@ -539,7 +539,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
                 <Label className="font-normal">In stock</Label>
                 <Switch checked={inStock} onCheckedChange={setInStock} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <FieldRow label="Quantity">
                   <Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} />
                 </FieldRow>
@@ -570,7 +570,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
 
 
         <Section title="Tax">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FieldRow label="Tax status">
               <Select value={taxStatus} onValueChange={(v) => setTaxStatus(v ?? 'taxable')}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -607,7 +607,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             <Label>Allow reviews</Label>
             <Switch checked={allowReviews} onCheckedChange={setAllowReviews} />
           </div>
-          <div className="grid grid-cols-2 gap-3 mt-3">
+          <div className="grid grid-cols-1 gap-3 mt-3 sm:grid-cols-2">
             <FieldRow label="Catalog visibility">
               <Select value={catalogVisibility} onValueChange={(v) => setCatalogVisibility(v ?? 'visible')}>
                 <SelectTrigger><SelectValue /></SelectTrigger>

@@ -180,7 +180,7 @@ function VariantForm({
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. 15 White" />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Regular ($)">
             <Input type="number" step="0.01" value={regularPrice} onChange={(e) => setRegularPrice(e.target.value)} />
           </Field>
@@ -195,7 +195,7 @@ function VariantForm({
             <Label className="font-normal">In stock</Label>
             <Switch checked={inStock} onCheckedChange={setInStock} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Quantity">
               <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
             </Field>

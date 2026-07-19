@@ -96,8 +96,8 @@ export function StaticBannerView() {
         <CardContent className="space-y-4">
           <div className="space-y-4">
             {currentSlides.map((slide, i) => (
-              <div key={i} className="flex gap-3 rounded border p-3">
-                <div className="flex flex-col items-center gap-2 pt-1 text-muted-foreground">
+              <div key={i} className="flex flex-col gap-3 rounded border p-3 sm:flex-row">
+                <div className="flex items-center gap-2 text-muted-foreground sm:flex-col sm:pt-1">
                   <GripVertical className="size-4" />
                   <span className="text-xs">{i + 1}</span>
                 </div>
@@ -109,7 +109,7 @@ export function StaticBannerView() {
                   className="h-24 w-32 shrink-0 rounded border object-cover"
                 />
 
-                <div className="grid flex-1 grid-cols-2 gap-2">
+                <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="col-span-2 space-y-1">
                     <Label>Title</Label>
                     <Input

@@ -106,7 +106,7 @@ export function WholesaleRulesPanel(props: Owner) {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="space-y-1">
           <Label className="text-xs">Role</Label>
           <Select value={roleKey} onValueChange={(v) => setRoleKey(v ?? 'wholesale_customer')}>

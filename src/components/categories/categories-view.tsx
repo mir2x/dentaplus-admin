@@ -63,14 +63,14 @@ export function CategoriesView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Input
           placeholder="Search name or slug…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
         />
-        <Button className="ml-auto" onClick={() => setEditing('new')}>
+        <Button className="sm:ml-auto" onClick={() => setEditing('new')}>
           <Plus className="size-4" /> New category
         </Button>
       </div>

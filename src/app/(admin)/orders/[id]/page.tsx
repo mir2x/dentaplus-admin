@@ -130,7 +130,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <button
             onClick={() => router.push('/orders')}
@@ -205,7 +205,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
           {/* Payment & Shipping */}
           {(order.payment || order.shipping) && (
-            <section className="rounded-lg border p-4 grid grid-cols-2 gap-4">
+            <section className="rounded-lg border p-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {order.payment && (
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Payment</p>

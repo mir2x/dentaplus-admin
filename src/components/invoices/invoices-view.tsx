@@ -64,7 +64,7 @@ export function InvoicesView() {
             setSearch(e.target.value);
             setPage(1);
           }}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
         />
         <Select
           value={status}

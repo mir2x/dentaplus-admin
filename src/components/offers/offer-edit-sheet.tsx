@@ -185,7 +185,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
 
         {form.rewardType === 'FREE_PRODUCT' && (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <RewardTypeField form={form} setForm={setForm} />
               <Field label="Free quantity">
                 <Input
@@ -220,7 +220,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           </>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Starts (optional)">
             <Input
               type="date"

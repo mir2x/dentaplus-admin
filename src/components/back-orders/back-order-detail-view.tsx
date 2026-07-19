@@ -137,7 +137,7 @@ export function BackOrderDetailView({ backOrderId }: Props) {
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between gap-4 rounded-md border p-3 text-sm"
+                    className="flex flex-col gap-3 rounded-md border p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <p className="font-medium">

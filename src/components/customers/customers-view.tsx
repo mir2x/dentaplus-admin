@@ -49,12 +49,12 @@ export function CustomersView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Input
           placeholder="Search name, email or company…"
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
         />
         <Button
           variant={wholesaleOnly ? 'default' : 'outline'}

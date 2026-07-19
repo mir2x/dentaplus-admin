@@ -65,12 +65,12 @@ export function OrdersView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Input
           placeholder="Search order no or customer…"
           value={search}
           onChange={(e) => handleFilterChange(() => setSearch(e.target.value))}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
         />
         <Select value={status} onValueChange={(v) => handleFilterChange(() => setStatus(v ?? 'all'))}>
           <SelectTrigger className="w-48">

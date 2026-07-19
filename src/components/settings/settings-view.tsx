@@ -187,7 +187,7 @@ export function SettingsView() {
 
           <div className="space-y-1.5 pt-2 border-t">
             <Label>Catalogue PDF</Label>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               {merged.cataloguePdfUrl ? (
                 <a href={merged.cataloguePdfUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">
                   View Current PDF
@@ -242,7 +242,7 @@ export function SettingsView() {
 
           <div className="space-y-1.5 pt-2 border-t">
             <Label>Logo</Label>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               {merged.siteLogoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={merged.siteLogoUrl} alt="Site logo" className="h-8 w-auto rounded border bg-muted p-1" />
@@ -278,7 +278,7 @@ export function SettingsView() {
 
           <div className="space-y-1.5 pt-2 border-t">
             <Label>Favicon</Label>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               {merged.faviconUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={merged.faviconUrl} alt="Favicon" className="size-8 rounded border bg-muted p-1" />
@@ -326,7 +326,7 @@ export function SettingsView() {
           <p className="text-xs text-muted-foreground">
             Download a .txt file of unique emails collected from user accounts and contact-us submissions.
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Select value={emailRange} onValueChange={(v) => v && setEmailRange(v as typeof emailRange)}>
               <SelectTrigger className="w-44">
                 <SelectValue />

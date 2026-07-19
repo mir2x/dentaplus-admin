@@ -131,12 +131,12 @@ export function ProductsView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Input
           placeholder="Search name, SKU or brand…"
           value={search}
           onChange={(e) => handleFilterChange(() => setSearch(e.target.value))}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
         />
         <Select value={type} onValueChange={(v) => handleFilterChange(() => setType(v ?? 'all'))}>
           <SelectTrigger className="w-52">
@@ -164,13 +164,13 @@ export function ProductsView() {
           </SelectContent>
         </Select>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
           <Input
             placeholder="Open by exact SKU…"
             value={sku}
             onChange={(e) => setSku(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && findBySku()}
-            className="w-44"
+            className="w-full sm:w-44"
           />
           <Button variant="outline" disabled={skuLoading || !sku.trim()} onClick={findBySku}>
             {skuLoading ? 'Finding…' : 'Find'}

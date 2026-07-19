@@ -29,12 +29,12 @@ export function StaffView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           Staff log in to this admin panel with the same access as any admin account —
           the pages they can see here are limited to what you assign below.
         </p>
-        <Button onClick={() => setEditing('new')}>Add staff</Button>
+        <Button className="sm:shrink-0" onClick={() => setEditing('new')}>Add staff</Button>
       </div>
 
       <div className="rounded-md border">

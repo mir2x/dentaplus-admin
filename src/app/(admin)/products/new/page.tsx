@@ -191,7 +191,7 @@ export default function NewProductPage() {
           <Input value={gtin} onChange={(e) => setGtin(e.target.value)} />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Type">
             <Select value={type} onValueChange={(v) => setType((v ?? 'GENERAL') as ProductType)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -281,7 +281,7 @@ export default function NewProductPage() {
 
         {/* ── Pricing ── */}
         {!hasVariant && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Regular price ($)">
               <Input type="number" step="0.01" value={regularPrice} onChange={(e) => setRegularPrice(e.target.value)} />
             </Field>
@@ -302,7 +302,7 @@ export default function NewProductPage() {
         {/* ── Tax ── */}
         <div className="border-t pt-4">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Tax</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Tax status">
               <Select value={taxStatus} onValueChange={(v) => setTaxStatus(v ?? 'taxable')}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -377,7 +377,7 @@ export default function NewProductPage() {
             <Label>Allow reviews</Label>
             <Switch checked={allowReviews} onCheckedChange={setAllowReviews} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Catalog visibility">
               <Select value={catalogVisibility} onValueChange={(v) => setCatalogVisibility(v ?? 'visible')}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
