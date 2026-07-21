@@ -35,10 +35,12 @@ export function WholesaleRulesPanel(props: Owner) {
     queryKey: ['wholesale-rules', ownerKey],
     queryFn: async () => (await api.get(basePath)).data,
   });
-  const { data: roles } = useQuery<CustomerRole[]>({
+  const { data: allRoles } = useQuery<CustomerRole[]>({
     queryKey: ['customer-roles'],
     queryFn: async () => (await api.get('/admin/customer-roles')).data,
   });
+  // loyal_customer only gates catalog/search visibility — it never has its own price rule.
+  const roles = allRoles?.filter((role) => role.key !== 'loyal_customer');
 
   const [roleKey, setRoleKey] = useState('wholesale_customer');
   const [minQuantity, setMinQuantity] = useState('1');

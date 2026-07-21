@@ -36,6 +36,18 @@ import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel
 import { VariantsManager } from '@/components/products/variants-manager';
 import { ProductOffersSection } from '@/components/products/product-offers-section';
 import { QuickbooksRefreshCard } from '@/components/shared/quickbooks-refresh-card';
+import {
+  InventoryStatus,
+  InventoryStatusField,
+  resolveInventoryPayload,
+  statusFromInventory,
+} from '@/components/products/inventory-status-field';
+
+const INVENTORY_STATUS_LABELS: Record<InventoryStatus, string> = {
+  in_stock: 'In stock',
+  out_of_stock: 'Out of stock',
+  backorder: 'On backorder',
+};
 
 const TYPE_OPTIONS: { value: ProductType; label: string }[] = [
   { value: 'GENERAL', label: 'General' },
@@ -48,6 +60,7 @@ const CATALOG_VISIBILITY_OPTIONS = [
   { value: 'visible', label: 'Visible (catalog & search)' },
   { value: 'catalog', label: 'Catalog only' },
   { value: 'search', label: 'Search only' },
+  { value: 'loyal_customer', label: 'Loyal customers only' },
   { value: 'hidden', label: 'Hidden' },
 ];
 
@@ -56,6 +69,16 @@ const TAX_STATUS_OPTIONS = [
   { value: 'shipping', label: 'Shipping only' },
   { value: 'none', label: 'None' },
 ];
+
+// Passed to <Select items> so the trigger shows the label immediately on
+// first render, instead of the raw value until the popup has opened once
+// (see InventoryStatusField for the full explanation).
+function toSelectItems<T extends string>(options: { value: T; label: string }[]): Record<T, string> {
+  return Object.fromEntries(options.map((o) => [o.value, o.label])) as Record<T, string>;
+}
+const TYPE_ITEMS = toSelectItems(TYPE_OPTIONS);
+const CATALOG_VISIBILITY_ITEMS = toSelectItems(CATALOG_VISIBILITY_OPTIONS);
+const TAX_STATUS_ITEMS = toSelectItems(TAX_STATUS_OPTIONS);
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -176,10 +199,11 @@ function ProductView({ product }: { product: ProductDetail }) {
           <Section title="Pricing & inventory">
             <Row label="Regular" value={regular ? formatCents(regular.amountCents, currency) : null} />
             <Row label="Sale" value={sale ? formatCents(sale.amountCents, currency) : null} />
-            <Row label="In stock" value={product.inventory ? (product.inventory.inStock ? 'Yes' : 'No') : '—'} />
-            <Row label="Quantity" value={product.inventory?.quantity?.toString()} />
+            <Row label="Stock status" value={INVENTORY_STATUS_LABELS[statusFromInventory(product.inventory)]} />
+            {statusFromInventory(product.inventory) === 'in_stock' && (
+              <Row label="Quantity" value={product.inventory?.quantity?.toString()} />
+            )}
             <Row label="Low-stock threshold" value={product.inventory?.lowStockAmount?.toString()} />
-            <Row label="Backorders allowed" value={product.inventory ? (product.inventory.backordersAllowed ? 'Yes' : 'No') : '—'} />
             <Row label="Sold individually" value={product.inventory ? (product.inventory.soldIndividually ? 'Yes' : 'No') : '—'} />
           </Section>
         )}
@@ -342,13 +366,12 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   const [brand, setBrand] = useState(product.brand ?? '');
   const [regularPrice, setRegularPrice] = useState(regular ? (regular.amountCents / 100).toFixed(2) : '');
   const [salePrice, setSalePrice] = useState(sale ? (sale.amountCents / 100).toFixed(2) : '');
+  const [inventoryStatus, setInventoryStatus] = useState<InventoryStatus>(
+    statusFromInventory(product.inventory),
+  );
   const [stock, setStock] = useState(product.inventory?.quantity?.toString() ?? '');
-  const [inStock, setInStock] = useState(product.inventory?.inStock ?? true);
   const [lowStockAmount, setLowStockAmount] = useState(
     product.inventory?.lowStockAmount?.toString() ?? '',
-  );
-  const [backordersAllowed, setBackordersAllowed] = useState(
-    product.inventory?.backordersAllowed ?? false,
   );
   const [soldIndividually, setSoldIndividually] = useState(
     product.inventory?.soldIndividually ?? false,
@@ -395,15 +418,18 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
       const identity = isQbo
         ? {}
         : { name, sku: product.hasVariant ? undefined : sku || undefined };
+      const { quantity: stockQuantity, ...inventoryPayload } = resolveInventoryPayload(
+        inventoryStatus,
+        stock,
+      );
       const pricing = product.hasVariant
         ? {}
         : {
             regularPrice: regularPrice ? parseFloat(regularPrice) : undefined,
             salePrice: salePrice ? parseFloat(salePrice) : undefined,
-            stockQuantity: stock !== '' ? parseInt(stock, 10) : undefined,
-            inStock,
+            stockQuantity,
+            ...inventoryPayload,
             lowStockAmount: lowStockAmount !== '' ? parseInt(lowStockAmount, 10) : undefined,
-            backordersAllowed,
             soldIndividually,
           };
       await api.patch(`/admin/products/${product.id}`, {
@@ -501,8 +527,8 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           </FieldRow>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FieldRow label="Type">
-              <Select value={type} onValueChange={(v) => setType((v ?? 'GENERAL') as ProductType)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select items={TYPE_ITEMS} value={type} onValueChange={(v) => setType((v ?? 'GENERAL') as ProductType)}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TYPE_OPTIONS.map((o) => (
                     <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -535,22 +561,17 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
 
             <div className="space-y-3 rounded-md border p-3">
               <Label>Stock</Label>
-              <div className="flex items-center justify-between">
-                <Label className="font-normal">In stock</Label>
-                <Switch checked={inStock} onCheckedChange={setInStock} />
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <FieldRow label="Quantity">
-                  <Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} />
-                </FieldRow>
+              <InventoryStatusField
+                status={inventoryStatus}
+                onStatusChange={setInventoryStatus}
+                quantity={stock}
+                onQuantityChange={setStock}
+              />
+              {inventoryStatus === 'in_stock' && (
                 <FieldRow label="Low-stock threshold">
                   <Input type="number" value={lowStockAmount} onChange={(e) => setLowStockAmount(e.target.value)} />
                 </FieldRow>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label className="font-normal">Backorders allowed</Label>
-                <Switch checked={backordersAllowed} onCheckedChange={setBackordersAllowed} />
-              </div>
+              )}
               <div className="flex items-center justify-between">
                 <Label className="font-normal">Sold individually</Label>
                 <Switch checked={soldIndividually} onCheckedChange={setSoldIndividually} />
@@ -572,8 +593,8 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
         <Section title="Tax">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FieldRow label="Tax status">
-              <Select value={taxStatus} onValueChange={(v) => setTaxStatus(v ?? 'taxable')}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select items={TAX_STATUS_ITEMS} value={taxStatus} onValueChange={(v) => setTaxStatus(v ?? 'taxable')}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TAX_STATUS_OPTIONS.map((o) => (
                     <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -609,11 +630,15 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           </div>
           <div className="grid grid-cols-1 gap-3 mt-3 sm:grid-cols-2">
             <FieldRow label="Catalog visibility">
-              <Select value={catalogVisibility} onValueChange={(v) => setCatalogVisibility(v ?? 'visible')}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
+              <Select
+                items={CATALOG_VISIBILITY_ITEMS}
+                value={catalogVisibility}
+                onValueChange={(v) => setCatalogVisibility(v ?? 'visible')}
+              >
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent className="min-w-72 p-2">
                   {CATALOG_VISIBILITY_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    <SelectItem key={o.value} value={o.value} className="py-2.5 my-0.5">{o.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

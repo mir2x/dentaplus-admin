@@ -24,38 +24,40 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/format';
 
-const REVIEW_STATUS_VARIANT = {
-  DRAFT: 'outline',
-  PENDING: 'secondary',
-  PROCESSING: 'default',
-  DECLINED: 'destructive',
-} as const;
+const STATUS_CONFIG = {
+  DRAFT:                { label: 'Draft',                variant: 'outline' as const },
+  PROCESSING:           { label: 'Processing',           variant: 'default' as const },
+  PARTIALLY_FULFILLED:  { label: 'Partially Fulfilled',  variant: 'secondary' as const },
+  FULFILLED:            { label: 'Fulfilled',            variant: 'default' as const },
+  CANCELLED:            { label: 'Cancelled',            variant: 'destructive' as const },
+};
 
 export function BackOrdersView() {
-  const [reviewStatus, setReviewStatus] = useState('all');
+  const [status, setStatus] = useState('all');
   const router = useRouter();
 
   const { data, isLoading } = useQuery<PaginatedResponse<BackOrder>>({
-    queryKey: ['back-orders', reviewStatus],
+    queryKey: ['back-orders', status],
     queryFn: async () => {
       const params: Record<string, string> = {};
-      if (reviewStatus !== 'all') params.reviewStatus = reviewStatus;
+      if (status !== 'all') params.status = status;
       return (await api.get('/admin/backorders', { params })).data;
     },
   });
 
   return (
     <div className="space-y-4">
-      <Select value={reviewStatus} onValueChange={(v) => setReviewStatus(v ?? 'all')}>
+      <Select value={status} onValueChange={(v) => setStatus(v ?? 'all')}>
         <SelectTrigger className="w-44">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All statuses</SelectItem>
-          <SelectItem value="DRAFT">Needs triage</SelectItem>
-          <SelectItem value="PENDING">Awaiting customer</SelectItem>
+          <SelectItem value="DRAFT">Draft — needs review</SelectItem>
           <SelectItem value="PROCESSING">Processing</SelectItem>
-          <SelectItem value="DECLINED">Declined</SelectItem>
+          <SelectItem value="PARTIALLY_FULFILLED">Partially Fulfilled</SelectItem>
+          <SelectItem value="FULFILLED">Fulfilled</SelectItem>
+          <SelectItem value="CANCELLED">Cancelled</SelectItem>
         </SelectContent>
       </Select>
 
@@ -67,15 +69,14 @@ export function BackOrdersView() {
               <TableHead>Order</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="text-center">Review</TableHead>
-              <TableHead className="text-center">Fulfillment</TableHead>
+              <TableHead className="text-center">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 6 }).map((_, j) => (
+                  {Array.from({ length: 5 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -89,14 +90,7 @@ export function BackOrdersView() {
                   className="cursor-pointer"
                   onClick={() => router.push(`/back-orders/${bo.id}`)}
                 >
-                  <TableCell className="font-medium">
-                    {bo.backOrderNo}
-                    {bo.hasUnreviewedItems && (
-                      <Badge variant="destructive" className="ml-2">
-                        New items
-                      </Badge>
-                    )}
-                  </TableCell>
+                  <TableCell className="font-medium">{bo.backOrderNo}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">#{bo.orderNo}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {bo.customer?.displayName ?? bo.customer?.email ?? '—'}
@@ -105,18 +99,15 @@ export function BackOrdersView() {
                     {formatDate(bo.createdAt)}
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant={REVIEW_STATUS_VARIANT[bo.reviewStatus]}>
-                      {bo.reviewStatus}
+                    <Badge variant={STATUS_CONFIG[bo.status].variant}>
+                      {STATUS_CONFIG[bo.status].label}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-center text-muted-foreground text-sm">
-                    {bo.status ?? '—'}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                   No back orders
                 </TableCell>
               </TableRow>

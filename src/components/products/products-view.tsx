@@ -42,6 +42,7 @@ const STOCK_OPTIONS = [
   { value: 'all', label: 'All stock' },
   { value: 'low', label: 'Low stock' },
   { value: 'out', label: 'Out of stock' },
+  { value: 'backorder', label: 'On backorder' },
 ];
 
 const TYPE_LABELS: Record<ProductType, string> = {
@@ -230,7 +231,10 @@ export function ProductsView() {
                           ) : (
                             <div className="size-8 shrink-0 rounded border bg-muted" />
                           )}
-                          <div className="truncate">{product.name}</div>
+                          <div className="truncate">
+                            {product.name}
+                            {!!product._count?.variants && ` (${product._count.variants})`}
+                          </div>
                         </div>
                         <div className="flex gap-1 mt-0.5">
                           {!product.published && (
@@ -261,7 +265,9 @@ export function ProductsView() {
                       </TableCell>
                       <TableCell>
                         {product.inventory ? (
-                          product.inventory.inStock ? (
+                          product.inventory.backordersAllowed ? (
+                            <span className="text-sm text-amber-600">Backorder</span>
+                          ) : product.inventory.inStock ? (
                             <span className="text-sm text-green-600">
                               {product.inventory.quantity != null
                                 ? product.inventory.quantity

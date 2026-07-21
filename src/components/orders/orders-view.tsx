@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Order, OrderStatus, PaginatedResponse } from '@/types/api';
+import { Order, OrderFulfillmentStatus, OrderPaymentStatus, PaginatedResponse } from '@/types/api';
 import {
   Table,
   TableBody,
@@ -23,28 +23,32 @@ import {
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/ui/pagination-controls';
-import { OrderStatusBadge } from './order-status-badge';
+import { OrderPaymentStatusBadge, OrderStatusBadge } from './order-status-badge';
 import { formatCents, formatDate } from '@/lib/format';
 
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'PENDING_PAYMENT', label: 'Pending Payment' },
-  { value: 'PAID', label: 'Paid' },
+const FULFILLMENT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'all', label: 'All fulfillment' },
   { value: 'PROCESSING', label: 'Processing' },
   { value: 'READY_TO_SHIP', label: 'Ready to Ship' },
   { value: 'SHIPPED', label: 'Shipped' },
   { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'COMPLETED', label: 'Completed' },
   { value: 'CANCELLED', label: 'Cancelled' },
+];
+
+const PAYMENT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'all', label: 'All payment' },
+  { value: 'UNPAID', label: 'Unpaid' },
+  { value: 'PARTIALLY_PAID', label: 'Partially Paid' },
+  { value: 'PAID', label: 'Paid' },
   { value: 'REFUNDED', label: 'Refunded' },
-  { value: 'ON_HOLD', label: 'On Hold' },
 ];
 
 const LIMIT = 25;
 
 export function OrdersView() {
   const router = useRouter();
-  const [status, setStatus] = useState('all');
+  const [fulfillmentStatus, setFulfillmentStatus] = useState('all');
+  const [paymentStatus, setPaymentStatus] = useState('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
@@ -54,10 +58,11 @@ export function OrdersView() {
   }
 
   const { data: result, isLoading } = useQuery<PaginatedResponse<Order>>({
-    queryKey: ['orders', status, search, page],
+    queryKey: ['orders', fulfillmentStatus, paymentStatus, search, page],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
-      if (status !== 'all') params.status = status;
+      if (fulfillmentStatus !== 'all') params.fulfillmentStatus = fulfillmentStatus;
+      if (paymentStatus !== 'all') params.paymentStatus = paymentStatus;
       if (search) params.q = search;
       return (await api.get('/admin/orders', { params })).data;
     },
@@ -72,12 +77,30 @@ export function OrdersView() {
           onChange={(e) => handleFilterChange(() => setSearch(e.target.value))}
           className="w-full sm:max-w-xs"
         />
-        <Select value={status} onValueChange={(v) => handleFilterChange(() => setStatus(v ?? 'all'))}>
+        <Select
+          value={fulfillmentStatus}
+          onValueChange={(v) => handleFilterChange(() => setFulfillmentStatus(v ?? 'all'))}
+        >
           <SelectTrigger className="w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {STATUS_OPTIONS.map((o) => (
+            {FULFILLMENT_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={paymentStatus}
+          onValueChange={(v) => handleFilterChange(() => setPaymentStatus(v ?? 'all'))}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAYMENT_OPTIONS.map((o) => (
               <SelectItem key={o.value} value={o.value}>
                 {o.label}
               </SelectItem>
@@ -93,7 +116,8 @@ export function OrdersView() {
               <TableHead>Order</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Fulfillment</TableHead>
+              <TableHead>Payment</TableHead>
               <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
@@ -101,7 +125,7 @@ export function OrdersView() {
             {isLoading
               ? Array.from({ length: LIMIT }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 5 }).map((_, j) => (
+                    {Array.from({ length: 6 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -122,7 +146,10 @@ export function OrdersView() {
                       {order.orderDate ? formatDate(order.orderDate) : '—'}
                     </TableCell>
                     <TableCell>
-                      <OrderStatusBadge status={order.status as OrderStatus} />
+                      <OrderStatusBadge status={order.fulfillmentStatus as OrderFulfillmentStatus} />
+                    </TableCell>
+                    <TableCell>
+                      <OrderPaymentStatusBadge status={order.paymentStatus as OrderPaymentStatus} />
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCents(order.totalCents, order.currency)}

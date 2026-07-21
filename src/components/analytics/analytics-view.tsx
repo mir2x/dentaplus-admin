@@ -36,13 +36,9 @@ interface TopProductsResponse {
   }[];
 }
 
-function toDateParam(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
 export function AnalyticsView() {
   const [preset, setPreset] = useState<DatePreset>('30d');
-  const [customDays, setCustomDays] = useState<number | null>(null);
+  const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);
   const [customersPage, setCustomersPage] = useState(1);
   const [wholesalePage, setWholesalePage] = useState(1);
 
@@ -52,23 +48,18 @@ export function AnalyticsView() {
     setWholesalePage(1);
   }
 
-  function handleCustomDays(days: number) {
-    setCustomDays(days);
+  function handleCustomRange(from: string, to: string) {
+    setCustomRange({ from, to });
     setCustomersPage(1);
     setWholesalePage(1);
   }
 
   const dateParams =
-    preset === 'custom' && customDays
-      ? (() => {
-          const to = new Date();
-          const from = new Date();
-          from.setDate(from.getDate() - (customDays - 1));
-          return { from: toDateParam(from), to: toDateParam(to) };
-        })()
-      : { preset };
+    preset === 'custom' && customRange ? customRange : { preset };
 
-  const dateKey = preset === 'custom' ? `custom-${customDays}` : preset;
+  const dateKey = preset === 'custom' && customRange
+    ? `custom-${customRange.from}-${customRange.to}`
+    : preset;
 
   const { data: summary, isLoading: summaryLoading } = useQuery<AnalyticsSummary>({
     queryKey: ['analytics-summary', dateKey],
@@ -120,7 +111,7 @@ export function AnalyticsView() {
 
   return (
     <div className="space-y-6">
-      <DateFilterBar preset={preset} onChange={handlePresetChange} onCustomDays={handleCustomDays} />
+      <DateFilterBar preset={preset} onChange={handlePresetChange} onCustomRange={handleCustomRange} />
       <SummaryCards data={summary} isLoading={summaryLoading} />
       <TrendChart data={trend} isLoading={trendLoading} />
       <div className="grid gap-6 lg:grid-cols-2">

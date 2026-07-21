@@ -6,10 +6,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Order, OrderStatus } from '@/types/api';
+import { Order, OrderFulfillmentStatus, OrderPaymentStatus } from '@/types/api';
 import { formatCents, formatDate, formatDateTime } from '@/lib/format';
-import { OrderStatusBadge } from '@/components/orders/order-status-badge';
+import { OrderPaymentStatusBadge, OrderStatusBadge } from '@/components/orders/order-status-badge';
 import { OrderQuickbooksSection } from '@/components/orders/order-quickbooks-section';
+import { RefundPanel } from '@/components/orders/refund-panel';
 import {
   Select,
   SelectContent,
@@ -23,21 +24,32 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft } from 'lucide-react';
 
-const NEXT_STATUSES: Partial<Record<OrderStatus, OrderStatus[]>> = {
-  PENDING_PAYMENT: ['PAID', 'CANCELLED', 'FAILED'],
-  PAID:            ['PROCESSING', 'CANCELLED', 'REFUNDED'],
-  PROCESSING:      ['READY_TO_SHIP', 'ON_HOLD', 'CANCELLED'],
-  READY_TO_SHIP:   ['SHIPPED', 'ON_HOLD'],
-  SHIPPED:         ['DELIVERED'],
-  DELIVERED:       ['COMPLETED', 'REFUNDED'],
-  ON_HOLD:         ['PROCESSING', 'CANCELLED'],
+// Fulfillment status: physical shipment of the order's in-stock items.
+// Independent of payment — see SYSTEM_MODEL.md "The two status axes".
+const NEXT_FULFILLMENT_STATUSES: Partial<
+  Record<OrderFulfillmentStatus, OrderFulfillmentStatus[]>
+> = {
+  PROCESSING:    ['READY_TO_SHIP', 'CANCELLED'],
+  READY_TO_SHIP: ['SHIPPED', 'CANCELLED'],
+  SHIPPED:       ['DELIVERED'],
 };
 
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  DRAFT: 'Draft', PENDING_PAYMENT: 'Pending Payment', PAID: 'Paid',
+const FULFILLMENT_LABELS: Record<OrderFulfillmentStatus, string> = {
   PROCESSING: 'Processing', READY_TO_SHIP: 'Ready to Ship', SHIPPED: 'Shipped',
-  DELIVERED: 'Delivered', COMPLETED: 'Completed', CANCELLED: 'Cancelled',
-  REFUNDED: 'Refunded', FAILED: 'Failed', ON_HOLD: 'On Hold',
+  DELIVERED: 'Delivered', CANCELLED: 'Cancelled',
+};
+
+// Payment status: UNPAID/PARTIALLY_PAID/PAID normally happen automatically
+// (direct at checkout, credit from the QBO invoice balance) — this lets
+// staff set them manually too, plus REFUNDED, which is always manual.
+const NEXT_PAYMENT_STATUSES: Partial<Record<OrderPaymentStatus, OrderPaymentStatus[]>> = {
+  UNPAID:         ['PARTIALLY_PAID', 'PAID'],
+  PARTIALLY_PAID: ['PAID', 'REFUNDED'],
+  PAID:           ['REFUNDED'],
+};
+
+const PAYMENT_LABELS: Record<OrderPaymentStatus, string> = {
+  UNPAID: 'Unpaid', PARTIALLY_PAID: 'Partially Paid', PAID: 'Paid', REFUNDED: 'Refunded',
 };
 
 function AddressBlock({ address }: {
@@ -69,9 +81,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [newStatus, setNewStatus] = useState('');
-  const [note, setNote] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [newFulfillmentStatus, setNewFulfillmentStatus] = useState('');
+  const [fulfillmentNote, setFulfillmentNote] = useState('');
+  const [savingFulfillment, setSavingFulfillment] = useState(false);
+
+  const [newPaymentStatus, setNewPaymentStatus] = useState('');
+  const [paymentNote, setPaymentNote] = useState('');
+  const [savingPayment, setSavingPayment] = useState(false);
 
   const { data: order, isLoading } = useQuery<Order>({
     queryKey: ['order', id],
@@ -81,23 +97,47 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     },
   });
 
-  async function handleUpdateStatus() {
-    if (!order || !newStatus) return;
-    setSaving(true);
+  async function handleUpdateFulfillmentStatus() {
+    if (!order || !newFulfillmentStatus) return;
+    setSavingFulfillment(true);
     try {
-      await api.patch(`/admin/orders/${order.id}/status`, {
-        status: newStatus,
-        note: note || undefined,
+      await api.patch(`/admin/orders/${order.id}/fulfillment-status`, {
+        status: newFulfillmentStatus,
+        note: fulfillmentNote || undefined,
       });
-      toast.success(`Status updated to ${STATUS_LABELS[newStatus as OrderStatus]}`);
+      toast.success(
+        `Fulfillment status updated to ${FULFILLMENT_LABELS[newFulfillmentStatus as OrderFulfillmentStatus]}`,
+      );
       queryClient.invalidateQueries({ queryKey: ['order', id] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      setNewStatus('');
-      setNote('');
+      setNewFulfillmentStatus('');
+      setFulfillmentNote('');
     } catch {
-      toast.error('Failed to update order status.');
+      toast.error('Failed to update fulfillment status.');
     } finally {
-      setSaving(false);
+      setSavingFulfillment(false);
+    }
+  }
+
+  async function handleUpdatePaymentStatus() {
+    if (!order || !newPaymentStatus) return;
+    setSavingPayment(true);
+    try {
+      await api.patch(`/admin/orders/${order.id}/payment-status`, {
+        status: newPaymentStatus,
+        note: paymentNote || undefined,
+      });
+      toast.success(
+        `Payment status updated to ${PAYMENT_LABELS[newPaymentStatus as OrderPaymentStatus]}`,
+      );
+      queryClient.invalidateQueries({ queryKey: ['order', id] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setNewPaymentStatus('');
+      setPaymentNote('');
+    } catch {
+      toast.error('Failed to update payment status — REFUNDED requires the order to have taken payment or already be cancelled.');
+    } finally {
+      setSavingPayment(false);
     }
   }
 
@@ -125,7 +165,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const billing = order.addresses.find((a) => a.type === 'BILLING');
   const shipping = order.addresses.find((a) => a.type === 'SHIPPING');
-  const nextOptions = NEXT_STATUSES[order.status] ?? [];
+  const nextFulfillmentOptions = NEXT_FULFILLMENT_STATUSES[order.fulfillmentStatus] ?? [];
+  // Mirrors the backend guard: REFUNDED only makes sense once money has
+  // actually moved, or the order is already cancelled.
+  const canRefund = order.paymentStatus !== 'UNPAID' || order.fulfillmentStatus === 'CANCELLED';
+  const nextPaymentOptions = (NEXT_PAYMENT_STATUSES[order.paymentStatus] ?? []).filter(
+    (s) => s !== 'REFUNDED' || canRefund,
+  );
 
   return (
     <div className="space-y-6">
@@ -139,9 +185,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <ArrowLeft className="size-3.5" />
             All orders
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <h2 className="text-xl font-semibold">Order #{order.orderNo}</h2>
-            <OrderStatusBadge status={order.status} />
+            <span className="rounded-md border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              {order.channel === 'CREDIT' ? 'Credit Account' : 'Direct Pay'}
+            </span>
+            <OrderStatusBadge status={order.fulfillmentStatus} />
+            <OrderPaymentStatusBadge status={order.paymentStatus} />
           </div>
           {order.orderDate && (
             <p className="text-sm text-muted-foreground">
@@ -242,20 +292,32 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <p className="text-sm font-medium">Order History</p>
               </div>
               <div className="divide-y">
-                {order.notes.map((n) => (
-                  <div key={n.id} className="px-4 py-3 flex gap-3">
-                    <div className="mt-1 size-1.5 rounded-full bg-primary shrink-0" />
-                    <div className="flex-1 space-y-0.5">
-                      <p className="text-sm">{n.content}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateTime(n.notedAt)}
-                        {n.addedBy && (
-                          <span className="ml-1">· {n.addedBy}</span>
+                {order.notes.map((n) => {
+                  // A status-change entry stores its default message on the
+                  // first line and an optional staff note on the rest — the
+                  // note is appended, never a replacement for the message.
+                  const [message, ...noteLines] = n.content.split('\n');
+                  const staffNote = noteLines.join('\n');
+                  return (
+                    <div key={n.id} className="px-4 py-3 flex gap-3">
+                      <div className="mt-1 size-1.5 rounded-full bg-primary shrink-0" />
+                      <div className="flex-1 space-y-0.5">
+                        <p className="text-sm">{message}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDateTime(n.notedAt)}
+                          {n.addedBy && (
+                            <span className="ml-1">· {n.addedBy}</span>
+                          )}
+                        </p>
+                        {staffNote && (
+                          <p className="text-sm text-muted-foreground italic pt-1">
+                            {staffNote}
+                          </p>
                         )}
-                      </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
@@ -319,38 +381,80 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </section>
           )}
 
-          {/* Update status */}
-          {nextOptions.length > 0 && (
+          {/* Refunds — standalone, zero automation; see SYSTEM_MODEL.md */}
+          <RefundPanel order={order} />
+
+          {/* Update fulfillment status */}
+          {nextFulfillmentOptions.length > 0 && (
             <section className="rounded-lg border p-4 space-y-3">
-              <p className="text-sm font-medium">Update Status</p>
-              <Select value={newStatus} onValueChange={(v) => setNewStatus(v ?? '')}>
+              <p className="text-sm font-medium">Update Fulfillment Status</p>
+              <Select
+                value={newFulfillmentStatus}
+                onValueChange={(v) => setNewFulfillmentStatus(v ?? '')}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select new status…" />
                 </SelectTrigger>
                 <SelectContent className="p-1.5">
-                  {nextOptions.map((s) => (
+                  {nextFulfillmentOptions.map((s) => (
                     <SelectItem key={s} value={s} className="px-3 py-2">
-                      {STATUS_LABELS[s]}
+                      {FULFILLMENT_LABELS[s]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <div className="space-y-1.5">
-                <Label htmlFor="note">Note (optional)</Label>
+                <Label htmlFor="fulfillment-note">Note (optional)</Label>
                 <Textarea
-                  id="note"
+                  id="fulfillment-note"
                   rows={2}
                   placeholder="Add a note…"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
+                  value={fulfillmentNote}
+                  onChange={(e) => setFulfillmentNote(e.target.value)}
                 />
               </div>
               <Button
                 className="w-full"
-                disabled={!newStatus || saving}
-                onClick={handleUpdateStatus}
+                disabled={!newFulfillmentStatus || savingFulfillment}
+                onClick={handleUpdateFulfillmentStatus}
               >
-                {saving ? 'Saving…' : 'Update Status'}
+                {savingFulfillment ? 'Saving…' : 'Update Fulfillment Status'}
+              </Button>
+            </section>
+          )}
+
+          {/* Update payment status */}
+          {nextPaymentOptions.length > 0 && (
+            <section className="rounded-lg border p-4 space-y-3">
+              <p className="text-sm font-medium">Update Payment Status</p>
+              <Select value={newPaymentStatus} onValueChange={(v) => setNewPaymentStatus(v ?? '')}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select new status…" />
+                </SelectTrigger>
+                <SelectContent className="p-1.5">
+                  {nextPaymentOptions.map((s) => (
+                    <SelectItem key={s} value={s} className="px-3 py-2">
+                      {PAYMENT_LABELS[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="space-y-1.5">
+                <Label htmlFor="payment-note">Note (optional)</Label>
+                <Textarea
+                  id="payment-note"
+                  rows={2}
+                  placeholder="Add a note…"
+                  value={paymentNote}
+                  onChange={(e) => setPaymentNote(e.target.value)}
+                />
+              </div>
+              <Button
+                className="w-full"
+                disabled={!newPaymentStatus || savingPayment}
+                onClick={handleUpdatePaymentStatus}
+              >
+                {savingPayment ? 'Saving…' : 'Update Payment Status'}
               </Button>
             </section>
           )}

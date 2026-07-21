@@ -23,6 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  InventoryStatus,
+  InventoryStatusField,
+  resolveInventoryPayload,
+  statusFromInventory,
+} from '@/components/products/inventory-status-field';
 
 interface Props {
   productId: string;
@@ -73,7 +79,9 @@ function VariantForm({
   );
   const [thumbnailUrl, setThumbnailUrl] = useState(isEdit ? (editing.thumbnailUrl ?? '') : '');
   const [isActive, setIsActive] = useState(isEdit ? editing.isActive : true);
-  const [inStock, setInStock] = useState(isEdit ? (editing.inventory?.inStock ?? true) : true);
+  const [inventoryStatus, setInventoryStatus] = useState<InventoryStatus>(
+    statusFromInventory(isEdit ? editing.inventory : null),
+  );
   const [quantity, setQuantity] = useState(
     isEdit && editing.inventory?.quantity != null ? editing.inventory.quantity.toString() : '',
   );
@@ -81,9 +89,6 @@ function VariantForm({
     isEdit && editing.inventory?.lowStockAmount != null
       ? editing.inventory.lowStockAmount.toString()
       : '',
-  );
-  const [backordersAllowed, setBackordersAllowed] = useState(
-    isEdit ? (editing.inventory?.backordersAllowed ?? false) : false,
   );
   const [soldIndividually, setSoldIndividually] = useState(
     isEdit ? (editing.inventory?.soldIndividually ?? false) : false,
@@ -141,10 +146,8 @@ function VariantForm({
         isActive,
         options: options.filter((o) => o.attributeName && o.value),
         inventory: {
-          inStock,
-          quantity: quantity !== '' ? parseInt(quantity, 10) : undefined,
+          ...resolveInventoryPayload(inventoryStatus, quantity),
           lowStockAmount: lowStockAmount !== '' ? parseInt(lowStockAmount, 10) : undefined,
-          backordersAllowed,
           soldIndividually,
         },
       };
@@ -191,22 +194,17 @@ function VariantForm({
 
         <div className="space-y-3 rounded-md border p-3">
           <Label>Stock</Label>
-          <div className="flex items-center justify-between">
-            <Label className="font-normal">In stock</Label>
-            <Switch checked={inStock} onCheckedChange={setInStock} />
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Quantity">
-              <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-            </Field>
+          <InventoryStatusField
+            status={inventoryStatus}
+            onStatusChange={setInventoryStatus}
+            quantity={quantity}
+            onQuantityChange={setQuantity}
+          />
+          {inventoryStatus === 'in_stock' && (
             <Field label="Low-stock threshold">
               <Input type="number" value={lowStockAmount} onChange={(e) => setLowStockAmount(e.target.value)} />
             </Field>
-          </div>
-          <div className="flex items-center justify-between">
-            <Label className="font-normal">Backorders allowed</Label>
-            <Switch checked={backordersAllowed} onCheckedChange={setBackordersAllowed} />
-          </div>
+          )}
           <div className="flex items-center justify-between">
             <Label className="font-normal">Sold individually</Label>
             <Switch checked={soldIndividually} onCheckedChange={setSoldIndividually} />

@@ -1,23 +1,22 @@
-export type OrderStatus =
-  | 'DRAFT'
-  | 'PENDING_PAYMENT'
-  | 'PAID'
+// Two independent axes — see SYSTEM_MODEL.md "The two status axes". Never
+// merge these back into one field.
+export type OrderChannel = 'DIRECT' | 'CREDIT';
+export type OrderFulfillmentStatus =
   | 'PROCESSING'
   | 'READY_TO_SHIP'
   | 'SHIPPED'
   | 'DELIVERED'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'REFUNDED'
-  | 'FAILED'
-  | 'ON_HOLD';
+  | 'CANCELLED';
+export type OrderPaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'REFUNDED';
 
 export type ProductType = 'GENERAL' | 'MEDICINE' | 'PRESCRIPTION_ONLY' | 'EQUIPMENT';
 
 export interface Order {
   id: string;
   orderNo: string;
-  status: OrderStatus;
+  channel: OrderChannel;
+  fulfillmentStatus: OrderFulfillmentStatus;
+  paymentStatus: OrderPaymentStatus;
   currency: string;
   customerEmail: string | null;
   orderDate: string | null;
@@ -35,6 +34,28 @@ export interface Order {
   notes: OrderNote[];
   quickbooksSyncPending?: boolean;
   invoices?: OrderInvoiceRef[];
+  refunds?: Refund[];
+}
+
+export interface RefundAttachment {
+  id: string;
+  fileName: string | null;
+  mimeType: string | null;
+  url: string | null;
+}
+
+export interface Refund {
+  id: string;
+  orderId: string;
+  fullRefund: boolean;
+  amount: number;
+  currency: string;
+  notes: string | null;
+  reference: string | null;
+  recordedBy: string | null;
+  refundedAt: string;
+  orderItemIds: string[];
+  attachments: RefundAttachment[];
 }
 
 export interface OrderInvoiceRef {
@@ -91,9 +112,15 @@ export interface OrderNote {
   isCustomerNote: boolean;
 }
 
-export type BackOrderReviewStatus = 'DRAFT' | 'PENDING' | 'PROCESSING' | 'DECLINED';
-export type BackOrderStatus = 'OPEN' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'CANCELLED';
-export type BackOrderItemDecision = 'PENDING_REVIEW' | 'APPROVED' | 'DECLINED';
+// Pure tracking, never an invoice/payment — see SYSTEM_MODEL.md "Backorder
+// (tracking only)". DRAFT is staff's working copy (never shown to the
+// customer); PROCESSING freezes auto-rebuild and becomes customer-visible.
+export type BackOrderStatus =
+  | 'DRAFT'
+  | 'PROCESSING'
+  | 'PARTIALLY_FULFILLED'
+  | 'FULFILLED'
+  | 'CANCELLED';
 
 export interface BackOrderItem {
   id: string;
@@ -101,15 +128,12 @@ export interface BackOrderItem {
   name: string;
   quantity: number;
   fulfilledQty: number;
-  decision: BackOrderItemDecision;
 }
 
 export interface BackOrder {
   id: string;
   backOrderNo: string;
-  reviewStatus: BackOrderReviewStatus;
-  status: BackOrderStatus | null;
-  hasUnreviewedItems: boolean;
+  status: BackOrderStatus;
   createdAt: string;
   updatedAt: string;
   items: BackOrderItem[];
@@ -177,9 +201,10 @@ export interface Product {
   quickbooksItemId?: string | null;
   brand: string | null;
   prices: ProductPrice[];
-  inventory: { inStock: boolean; quantity: number | null } | null;
+  inventory: { inStock: boolean | null; quantity: number | null; backordersAllowed: boolean } | null;
   categories: { category: { id: string; name: string; slug: string } }[];
   images?: ProductImage[];
+  _count?: { variants: number };
 }
 
 export interface ProductVariantDetail {
@@ -196,7 +221,7 @@ export interface ProductVariantDetail {
   options: { attributeName: string; value: string }[];
   inventory: {
     id: string;
-    inStock: boolean;
+    inStock: boolean | null;
     quantity: number | null;
     lowStockAmount: number | null;
     backordersAllowed: boolean;
@@ -226,7 +251,7 @@ export interface ProductDetail extends Product {
   updatedAt: string;
   inventory:
     | {
-        inStock: boolean;
+        inStock: boolean | null;
         quantity: number | null;
         lowStockAmount: number | null;
         backordersAllowed: boolean;
@@ -613,7 +638,8 @@ export interface Customer360 extends Customer {
   orders: {
     id: string;
     orderNo: string;
-    status: OrderStatus;
+    fulfillmentStatus: OrderFulfillmentStatus;
+    paymentStatus: OrderPaymentStatus;
     totalCents: number;
     orderDate: string | null;
   }[];

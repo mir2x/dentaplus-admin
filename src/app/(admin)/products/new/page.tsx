@@ -31,6 +31,7 @@ const CATALOG_VISIBILITY_OPTIONS = [
   { value: 'visible', label: 'Visible (catalog & search)' },
   { value: 'catalog', label: 'Catalog only' },
   { value: 'search', label: 'Search only' },
+  { value: 'loyal_customer', label: 'Loyal customers only' },
   { value: 'hidden', label: 'Hidden' },
 ];
 
@@ -39,6 +40,16 @@ const TAX_STATUS_OPTIONS = [
   { value: 'shipping', label: 'Shipping only' },
   { value: 'none', label: 'None' },
 ];
+
+// Passed to <Select items> so the trigger shows the label immediately on
+// first render, instead of the raw value until the popup has opened once
+// (see InventoryStatusField for the full explanation).
+function toSelectItems<T extends string>(options: { value: T; label: string }[]): Record<T, string> {
+  return Object.fromEntries(options.map((o) => [o.value, o.label])) as Record<T, string>;
+}
+const TYPE_ITEMS = toSelectItems(TYPE_OPTIONS);
+const CATALOG_VISIBILITY_ITEMS = toSelectItems(CATALOG_VISIBILITY_OPTIONS);
+const TAX_STATUS_ITEMS = toSelectItems(TAX_STATUS_OPTIONS);
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -193,8 +204,8 @@ export default function NewProductPage() {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Type">
-            <Select value={type} onValueChange={(v) => setType((v ?? 'GENERAL') as ProductType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select items={TYPE_ITEMS} value={type} onValueChange={(v) => setType((v ?? 'GENERAL') as ProductType)}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TYPE_OPTIONS.map((o) => (
                   <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -304,8 +315,8 @@ export default function NewProductPage() {
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Tax</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Tax status">
-              <Select value={taxStatus} onValueChange={(v) => setTaxStatus(v ?? 'taxable')}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select items={TAX_STATUS_ITEMS} value={taxStatus} onValueChange={(v) => setTaxStatus(v ?? 'taxable')}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TAX_STATUS_OPTIONS.map((o) => (
                     <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -379,11 +390,15 @@ export default function NewProductPage() {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Catalog visibility">
-              <Select value={catalogVisibility} onValueChange={(v) => setCatalogVisibility(v ?? 'visible')}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
+              <Select
+                items={CATALOG_VISIBILITY_ITEMS}
+                value={catalogVisibility}
+                onValueChange={(v) => setCatalogVisibility(v ?? 'visible')}
+              >
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent className="min-w-72 p-2">
                   {CATALOG_VISIBILITY_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    <SelectItem key={o.value} value={o.value} className="py-2.5 my-0.5">{o.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

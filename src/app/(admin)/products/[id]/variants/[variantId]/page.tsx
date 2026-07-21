@@ -14,6 +14,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { VariantEditSheet } from '@/components/products/variant-edit-sheet';
 import { VariantOffersSection } from '@/components/products/variant-offers-section';
 import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel';
+import { InventoryStatus, statusFromInventory } from '@/components/products/inventory-status-field';
+
+const INVENTORY_STATUS_LABELS: Record<InventoryStatus, string> = {
+  in_stock: 'In stock',
+  out_of_stock: 'Out of stock',
+  backorder: 'On backorder',
+};
 
 export default function VariantDetailPage({
   params,
@@ -89,9 +96,10 @@ export default function VariantDetailPage({
           <Row label="SKU" value={v.sku} />
           <Row label="Regular" value={v.regularCents != null ? formatCents(v.regularCents) : null} />
           <Row label="Sale" value={v.saleCents != null ? formatCents(v.saleCents) : null} />
-          <Row label="In stock" value={v.inventory ? (v.inventory.inStock ? 'Yes' : 'No') : '—'} />
-          <Row label="Quantity" value={v.inventory?.quantity?.toString()} />
-          <Row label="Backorders allowed" value={v.inventory ? (v.inventory.backordersAllowed ? 'Yes' : 'No') : '—'} />
+          <Row label="Stock status" value={INVENTORY_STATUS_LABELS[statusFromInventory(v.inventory)]} />
+          {statusFromInventory(v.inventory) === 'in_stock' && (
+            <Row label="Quantity" value={v.inventory?.quantity?.toString()} />
+          )}
           <Row label="Active" value={v.isActive ? 'Yes' : 'No'} />
         </section>
 

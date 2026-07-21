@@ -17,22 +17,22 @@ const PRESETS: { value: DatePreset; label: string }[] = [
 interface Props {
   preset: DatePreset;
   onChange: (preset: DatePreset) => void;
-  onCustomDays: (days: number) => void;
+  onCustomRange: (from: string, to: string) => void;
 }
 
-export function DateFilterBar({ preset, onChange, onCustomDays }: Props) {
+export function DateFilterBar({ preset, onChange, onCustomRange }: Props) {
   const [showCustomInput, setShowCustomInput] = useState(false);
-  const [days, setDays] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   function handleCustomClick() {
     setShowCustomInput(true);
   }
 
   function handleGo() {
-    const parsed = Number(days);
-    if (!Number.isInteger(parsed) || parsed < 1) return;
+    if (!from || !to || from > to) return;
     onChange('custom');
-    onCustomDays(parsed);
+    onCustomRange(from, to);
   }
 
   return (
@@ -60,18 +60,21 @@ export function DateFilterBar({ preset, onChange, onCustomDays }: Props) {
       {showCustomInput && (
         <div className="flex items-center gap-2">
           <Input
-            type="number"
-            min={1}
-            placeholder="Days"
-            value={days}
-            onChange={(e) => setDays(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleGo();
-            }}
-            className="w-20"
+            type="date"
+            value={from}
+            max={to || undefined}
+            onChange={(e) => setFrom(e.target.value)}
+            className="w-auto"
           />
-          <span className="text-sm text-muted-foreground">days</span>
-          <Button size="sm" onClick={handleGo}>
+          <span className="text-sm text-muted-foreground">to</span>
+          <Input
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={(e) => setTo(e.target.value)}
+            className="w-auto"
+          />
+          <Button size="sm" onClick={handleGo} disabled={!from || !to || from > to}>
             Go
           </Button>
         </div>

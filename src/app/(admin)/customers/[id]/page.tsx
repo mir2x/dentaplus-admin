@@ -164,7 +164,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           </Section>
 
           <MiniList title="Recent orders" rows={c.orders} empty="No orders"
-            render={(o) => <Line key={o.id} left={o.orderNo} mid={o.status} right={formatCents(o.totalCents)} />} />
+            render={(o) => <Line key={o.id} left={o.orderNo} mid={o.fulfillmentStatus} right={formatCents(o.totalCents)} />} />
           <MiniList title="Invoices" rows={c.invoices} empty="No invoices"
             render={(i) => <Line key={i.id} left={i.invoiceNo} mid={i.syncStatus ?? i.type} right={`${formatCents(i.outstandingCents)} due`} />} />
           <MiniList title="Statements" rows={c.statements} empty="No statements"
