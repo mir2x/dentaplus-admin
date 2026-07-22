@@ -16,17 +16,29 @@ import {
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 import { formatDate } from '@/lib/format';
 import { LoginAsButton } from './login-as-button';
 
 const LIMIT = 25;
 
+const ROLE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'all', label: 'All customers' },
+  { value: 'wholesale_customer', label: 'Wholesale' },
+  { value: 'loyal_customer', label: 'Loyal' },
+];
+
 export function CustomersView() {
   const router = useRouter();
   const [search, setSearch] = useState('');
-  const [wholesaleOnly, setWholesaleOnly] = useState(false);
+  const [role, setRole] = useState('all');
   const [page, setPage] = useState(1);
 
   function handleSearchChange(value: string) {
@@ -34,18 +46,20 @@ export function CustomersView() {
     setPage(1);
   }
 
+  function handleRoleChange(value: string) {
+    setRole(value);
+    setPage(1);
+  }
+
   const { data: result, isLoading } = useQuery<PaginatedResponse<Customer>>({
-    queryKey: ['customers', search, page],
+    queryKey: ['customers', search, role, page],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
       if (search) params.q = search;
+      if (role !== 'all') params.role = role;
       return (await api.get('/admin/customers', { params })).data;
     },
   });
-
-  const visibleCustomers = wholesaleOnly
-    ? result?.data.filter((c) => c.roles.some(({ role }) => role.key === 'wholesale_customer'))
-    : result?.data;
 
   return (
     <div className="space-y-4">
@@ -56,13 +70,18 @@ export function CustomersView() {
           onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full sm:max-w-xs"
         />
-        <Button
-          variant={wholesaleOnly ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setWholesaleOnly((v) => !v)}
-        >
-          Wholesale only
-        </Button>
+        <Select value={role} onValueChange={(v) => handleRoleChange(v ?? 'all')}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ROLE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-md border">
@@ -89,7 +108,7 @@ export function CustomersView() {
                     ))}
                   </TableRow>
                 ))
-              : visibleCustomers?.map((customer) => (
+              : result?.data.map((customer) => (
                   <TableRow
                     key={customer.id}
                     className="cursor-pointer"
