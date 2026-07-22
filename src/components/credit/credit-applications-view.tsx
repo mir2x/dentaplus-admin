@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { CreditApplication, PaginatedResponse } from '@/types/api';
 import {
@@ -33,6 +33,7 @@ const STATUS_VARIANT = {
 export function CreditApplicationsView() {
   const [status, setStatus] = useState('all');
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery<PaginatedResponse<CreditApplication>>({
     queryKey: ['credit-applications', status],
@@ -42,6 +43,16 @@ export function CreditApplicationsView() {
       return (await api.get('/admin/credit-applications', { params })).data;
     },
   });
+
+  // Visiting this page resets the sidebar's "new applications" badge to zero.
+  const markSeen = useMutation({
+    mutationFn: () => api.post('/admin/credit-applications/mark-seen'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['credit-applications-new-count'] }),
+  });
+  useEffect(() => {
+    markSeen.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-4">

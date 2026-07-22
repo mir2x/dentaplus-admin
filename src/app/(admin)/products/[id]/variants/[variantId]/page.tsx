@@ -140,7 +140,7 @@ export default function VariantDetailPage({
         <WholesaleRulesPanel variantId={variantId} />
       </section>
 
-      <VariantOffersSection variantId={variantId} />
+      <VariantOffersSection variantId={variantId} variants={variants ?? []} />
 
       <VariantEditSheet
         productId={productId}

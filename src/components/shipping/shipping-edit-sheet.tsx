@@ -44,15 +44,14 @@ function dollars(cents: number | null | undefined): string {
 function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; onClose: () => void }) {
   const queryClient = useQueryClient();
   const isEdit = editing !== 'new';
+  const isDefault = isEdit && editing.isDefault;
 
   const [name, setName] = useState(isEdit ? editing.name : '');
   const [description, setDescription] = useState(isEdit ? (editing.description ?? '') : '');
   const [state, setState] = useState(isEdit ? (editing.state ?? '') : '');
   const [postcodes, setPostcodes] = useState(isEdit ? (editing.postcodes ?? '') : '');
-  const [priority, setPriority] = useState(isEdit ? String(editing.priority) : '0');
   const [rate, setRate] = useState(isEdit ? dollars(editing.rateCents) : '');
   const [freeOver, setFreeOver] = useState(isEdit ? dollars(editing.freeThresholdCents) : '');
-  const [sortOrder, setSortOrder] = useState(isEdit ? String(editing.sortOrder) : '0');
   const [isActive, setIsActive] = useState(isEdit ? editing.isActive : true);
 
   const save = useMutation({
@@ -61,12 +60,10 @@ function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; o
         name,
         description: description || undefined,
         country: 'AU',
-        state: state.trim() || undefined,
-        postcodes: postcodes.trim() || undefined,
-        priority: Number(priority) || 0,
+        // The default zone stays nationwide — state/postcodes never sent for it.
+        ...(isDefault ? {} : { state: state.trim(), postcodes: postcodes.trim() || undefined }),
         rateCents: Math.round(parseFloat(rate || '0') * 100),
         freeThresholdCents: freeOver ? Math.round(parseFloat(freeOver) * 100) : undefined,
-        sortOrder: Number(sortOrder) || 0,
         isActive,
       };
       return isEdit
@@ -107,22 +104,34 @@ function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; o
         </Field>
 
         <div className="rounded-md bg-muted/40 p-3 space-y-3">
-          <p className="text-xs text-muted-foreground">
-            Match the delivery address. Leave both blank for a whole-Australia zone. The most
-            specific matching zone (highest priority) wins.
-          </p>
-          <Field label="State (optional, e.g. NSW)">
-            <Input value={state} placeholder="Leave blank for any state" onChange={(e) => setState(e.target.value)} />
+          {isDefault ? (
+            <p className="text-xs text-muted-foreground">
+              This is the default nationwide zone — it applies whenever no other zone&apos;s state
+              matches the delivery address. It always covers all of Australia and can&apos;t be
+              given a state or postcode range.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Matched against the delivery address: state is required, postcodes are optional
+              (narrows the zone to part of that state). A zone matching both state and postcode
+              wins over one matching state alone.
+            </p>
+          )}
+          <Field label={isDefault ? 'State' : 'State (required, e.g. NSW)'}>
+            <Input
+              value={isDefault ? '' : state}
+              placeholder={isDefault ? 'All of Australia' : 'e.g. NSW'}
+              disabled={isDefault}
+              onChange={(e) => setState(e.target.value)}
+            />
           </Field>
           <Field label="Postcodes (optional)">
             <Input
-              value={postcodes}
-              placeholder="e.g. 2000-2234, 2555-2574"
+              value={isDefault ? '' : postcodes}
+              placeholder={isDefault ? 'All of Australia' : 'e.g. 2000-2234, 2555-2574'}
+              disabled={isDefault}
               onChange={(e) => setPostcodes(e.target.value)}
             />
-          </Field>
-          <Field label="Priority (higher wins)">
-            <Input type="number" value={priority} onChange={(e) => setPriority(e.target.value)} />
           </Field>
         </div>
 
@@ -147,10 +156,6 @@ function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; o
           </Field>
         </div>
 
-        <Field label="Sort order">
-          <Input type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} />
-        </Field>
-
         <div className="flex items-center justify-between">
           <Label>Active</Label>
           <Switch checked={isActive} onCheckedChange={setIsActive} />
@@ -159,12 +164,12 @@ function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; o
         <div className="flex gap-2 pt-2">
           <Button
             className="flex-1"
-            disabled={save.isPending || !name}
+            disabled={save.isPending || !name || (!isDefault && !state.trim())}
             onClick={() => save.mutate()}
           >
             {save.isPending ? 'Saving…' : isEdit ? 'Save' : 'Create'}
           </Button>
-          {isEdit && (
+          {isEdit && !isDefault && (
             <Button variant="destructive" disabled={del.isPending} onClick={() => del.mutate()}>
               Delete
             </Button>

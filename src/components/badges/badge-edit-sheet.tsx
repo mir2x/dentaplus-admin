@@ -1,11 +1,11 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Upload, X } from 'lucide-react';
+import { Search, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { ProductBadge, ProductBadgeKind } from '@/types/api';
+import { Badge, Category } from '@/types/api';
 import {
   Sheet,
   SheetContent,
@@ -16,28 +16,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-
-const KIND_OPTIONS: { value: ProductBadgeKind; label: string }[] = [
-  { value: 'BEST_SELLER', label: 'Best Seller' },
-  { value: 'BULK_SALE', label: 'Bulk Sale' },
-  { value: 'SAVE_MORE', label: 'Save More' },
-  { value: 'EOF_SALE', label: 'EOF Sale' },
-  { value: 'NEW', label: 'New' },
-  { value: 'CLEARANCE', label: 'Clearance' },
-  { value: 'CUSTOM', label: 'Custom' },
-];
 
 interface Props {
-  editing: ProductBadge | 'new' | null;
+  editing: Badge | 'new' | null;
   onClose: () => void;
 }
 
@@ -57,18 +38,54 @@ export function BadgeEditSheet({ editing, onClose }: Props) {
   );
 }
 
-function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClose: () => void }) {
+interface FlatCategory {
+  id: string;
+  name: string;
+  parentName?: string;
+}
+
+function BadgeForm({ editing, onClose }: { editing: Badge | 'new'; onClose: () => void }) {
   const queryClient = useQueryClient();
   const isEdit = editing !== 'new';
 
   const [label, setLabel] = useState(isEdit ? editing.label : '');
-  const [kind, setKind] = useState<ProductBadgeKind>(isEdit ? editing.kind : 'CUSTOM');
-  const [color, setColor] = useState(isEdit ? (editing.color ?? '') : '');
   const [imageUrl, setImageUrl] = useState(isEdit ? (editing.imageUrl ?? '') : '');
-  const [priority, setPriority] = useState(isEdit ? String(editing.priority) : '0');
   const [isActive, setIsActive] = useState(isEdit ? editing.isActive : true);
+  const [categoryId, setCategoryId] = useState(isEdit ? editing.categoryId : '');
+  const [categorySearch, setCategorySearch] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const { data: allBadges } = useQuery<Badge[]>({
+    queryKey: ['badges'],
+    queryFn: async () => (await api.get('/admin/badges')).data,
+  });
+  const { data: allCategories } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: async () => (await api.get('/admin/categories')).data,
+  });
+
+  const usedCategoryIds = useMemo(() => {
+    const ids = new Set<string>();
+    allBadges?.forEach((b) => {
+      if (!isEdit || b.id !== editing.id) ids.add(b.categoryId);
+    });
+    return ids;
+  }, [allBadges, isEdit, editing]);
+
+  const flatCategories = useMemo(() => {
+    const flat: FlatCategory[] = [];
+    allCategories?.forEach((cat) => {
+      flat.push({ id: cat.id, name: cat.name });
+      cat.children.forEach((child) => {
+        flat.push({ id: child.id, name: child.name, parentName: cat.name });
+      });
+    });
+    const search = categorySearch.trim().toLowerCase();
+    return search
+      ? flat.filter((c) => c.name.toLowerCase().includes(search))
+      : flat;
+  }, [allCategories, categorySearch]);
 
   async function handleFile(file: File) {
     setUploading(true);
@@ -90,11 +107,9 @@ function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClos
     mutationFn: () => {
       const payload = {
         label,
-        kind,
-        color: color || undefined,
         imageUrl: imageUrl || undefined,
-        priority: Number(priority) || 0,
         isActive,
+        categoryId,
       };
       return isEdit
         ? api.patch(`/admin/badges/${editing.id}`, payload)
@@ -105,11 +120,11 @@ function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClos
       queryClient.invalidateQueries({ queryKey: ['badges'] });
       onClose();
     },
-    onError: () => toast.error('Save failed'),
+    onError: () => toast.error('This category may already have a badge assigned'),
   });
 
   const del = useMutation({
-    mutationFn: () => api.delete(`/admin/badges/${(editing as ProductBadge).id}`),
+    mutationFn: () => api.delete(`/admin/badges/${(editing as Badge).id}`),
     onSuccess: () => {
       toast.success('Badge deleted');
       queryClient.invalidateQueries({ queryKey: ['badges'] });
@@ -132,49 +147,6 @@ function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClos
             placeholder="e.g. Best Seller"
             onChange={(e) => setLabel(e.target.value)}
           />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Kind</Label>
-          <Select value={kind} onValueChange={(v) => setKind((v ?? 'CUSTOM') as ProductBadgeKind)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {KIND_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>Color</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="color"
-                className="h-9 w-12 p-1"
-                value={color || '#2563eb'}
-                onChange={(e) => setColor(e.target.value)}
-              />
-              <Input
-                value={color}
-                placeholder="#2563eb"
-                onChange={(e) => setColor(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Priority</Label>
-            <Input
-              type="number"
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-            />
-          </div>
         </div>
 
         <div className="space-y-1.5">
@@ -226,10 +198,74 @@ function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClos
           <Switch checked={isActive} onCheckedChange={setIsActive} />
         </div>
 
+        <div className="space-y-1.5">
+          <Label>Category</Label>
+          <div className="flex h-64 flex-col overflow-hidden rounded-md border">
+            <div className="relative border-b shrink-0">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={categorySearch}
+                placeholder="Search categories…"
+                onChange={(e) => setCategorySearch(e.target.value)}
+                className="rounded-none border-0 pl-8 pr-8 focus-visible:ring-0"
+              />
+              {categorySearch && (
+                <button
+                  type="button"
+                  onClick={() => setCategorySearch('')}
+                  aria-label="Clear search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y">
+              {flatCategories.length ? (
+                flatCategories.map((cat) => {
+                  const disabled = usedCategoryIds.has(cat.id);
+                  const selected = categoryId === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => setCategoryId(cat.id)}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                        disabled
+                          ? 'cursor-not-allowed opacity-50'
+                          : selected
+                            ? 'bg-primary/10'
+                            : 'hover:bg-muted/40'
+                      }`}
+                    >
+                      {cat.parentName ? (
+                        <span>
+                          <span className="text-muted-foreground">{cat.parentName} ›</span> {cat.name}
+                        </span>
+                      ) : (
+                        cat.name
+                      )}
+                      {disabled && (
+                        <span className="ml-auto text-xs text-muted-foreground">Has a badge</span>
+                      )}
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="px-3 py-2 text-xs text-muted-foreground">No categories found.</p>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            A badge can only be attached to a single category.
+          </p>
+        </div>
+
         <div className="flex gap-2 pt-2">
           <Button
             className="flex-1"
-            disabled={save.isPending || !label}
+            disabled={save.isPending || !label || !categoryId}
             onClick={() => save.mutate()}
           >
             {save.isPending ? 'Saving…' : isEdit ? 'Save' : 'Create'}
@@ -240,63 +276,6 @@ function BadgeForm({ editing, onClose }: { editing: ProductBadge | 'new'; onClos
             </Button>
           )}
         </div>
-
-        {isEdit && <BadgeProducts badgeId={(editing as ProductBadge).id} />}
-      </div>
-    </>
-  );
-}
-
-function BadgeProducts({ badgeId }: { badgeId: string }) {
-  const queryClient = useQueryClient();
-
-  const { data: products, isLoading } = useQuery<
-    { id: string; name: string; sku: string | null; slug: string }[]
-  >({
-    queryKey: ['badge-products', badgeId],
-    queryFn: () => api.get(`/admin/badges/${badgeId}/products`).then((r) => r.data),
-  });
-
-  const detach = useMutation({
-    mutationFn: (productId: string) =>
-      api.delete(`/admin/products/${productId}/badges/${badgeId}`),
-    onSuccess: () => {
-      toast.success('Removed from product');
-      void queryClient.invalidateQueries({ queryKey: ['badge-products', badgeId] });
-      void queryClient.invalidateQueries({ queryKey: ['badges'] });
-    },
-    onError: () => toast.error('Failed to remove'),
-  });
-
-  return (
-    <>
-      <Separator className="my-4" />
-      <div className="space-y-2">
-        <p className="text-sm font-medium">
-          Attached products {products ? `(${products.length})` : ''}
-        </p>
-        {isLoading && (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-9 w-full" />)}
-          </div>
-        )}
-        {products?.length === 0 && (
-          <p className="text-sm text-muted-foreground">No products attached.</p>
-        )}
-        {products?.map((p) => (
-          <div key={p.id} className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm">
-            <span className="truncate font-medium">{p.name}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
-              disabled={detach.isPending}
-              onClick={() => detach.mutate(p.id)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
       </div>
     </>
   );

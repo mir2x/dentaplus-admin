@@ -147,24 +147,16 @@ export interface ProductPrice {
   currency: string;
 }
 
-export type ProductBadgeKind =
-  | 'BEST_SELLER'
-  | 'BULK_SALE'
-  | 'SAVE_MORE'
-  | 'EOF_SALE'
-  | 'NEW'
-  | 'CLEARANCE'
-  | 'CUSTOM';
-
-export interface ProductBadge {
+/** A staff-managed sticker/label attached 1:1 to a category. */
+export interface Badge {
   id: string;
   label: string;
-  kind: ProductBadgeKind;
-  color: string | null;
   imageUrl: string | null;
-  priority: number;
   isActive: boolean;
-  _count?: { products: number };
+  categoryId: string;
+  category?: { id: string; name: string; slug: string };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ProductImage {
@@ -174,19 +166,29 @@ export interface ProductImage {
   position: number;
 }
 
-/** A badge assigned to a specific product, with that product's own badge image (if uploaded). */
-export interface ProductBadgeAssignment extends ProductBadge {
-  imageUrl: string | null;
-}
+export type BannerType = 'PAGE' | 'PRODUCT';
 
 export interface Banner {
   id: string;
+  label: string;
+  type: BannerType;
   productId: string | null;
+  path: string | null;
   imageUrl: string;
+  priority: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   product: { id: string; name: string; slug: string } | null;
+}
+
+/** An email captured via a banner's "Subscribe now" form. */
+export interface BannerSubscription {
+  id: string;
+  bannerId: string;
+  email: string;
+  createdAt: string;
+  banner: { id: string; label: string };
 }
 
 export interface Product {
@@ -259,10 +261,10 @@ export interface ProductDetail extends Product {
       }
     | null;
   tags: { tag: { id: string; name: string; slug: string } }[];
+  collections: { collection: { id: string; title: string; imageUrl: string } }[];
   attributes: { id: string; productId: string; attributeName: string; value: string }[];
   variants: ProductVariantDetail[];
   wholesaleRules: WholesaleRule[];
-  badges: { badge: ProductBadge; imageUrl: string | null }[];
 }
 
 /** Raw QuickBooks snapshots (on-demand refresh). */
@@ -318,11 +320,10 @@ export interface ShippingMethod {
   country: string;
   state: string | null;
   postcodes: string | null;
-  priority: number;
   rateCents: number;
   freeThresholdCents: number | null;
   isActive: boolean;
-  sortOrder: number;
+  isDefault: boolean;
 }
 
 export type WholesaleDiscountType = 'FIXED' | 'PERCENTAGE';
@@ -344,6 +345,17 @@ export interface Category {
   slug: string;
   parentId: string | null;
   children: { id: string; name: string; slug: string; parentId: string | null }[];
+}
+
+/** Curated storefront tile — a title + image pointing at a set of products. */
+export interface Collection {
+  id: string;
+  title: string;
+  imageUrl: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { products: number };
 }
 
 export interface Tag {
@@ -438,17 +450,17 @@ export interface CreditApplication {
   firstName?: string;
   lastName?: string;
   companyName?: string | null;
-  address1?: string;
-  address2?: string | null;
-  suburb?: string;
-  state?: string;
-  postcode?: string;
+  deliveryAddress1?: string;
+  deliveryAddress2?: string | null;
+  deliverySuburb?: string;
+  deliveryState?: string;
+  deliveryPostcode?: string;
   country?: string;
-  postalAddress1?: string | null;
-  postalAddress2?: string | null;
-  postalSuburb?: string | null;
-  postalState?: string | null;
-  postalPostcode?: string | null;
+  billingAddress1?: string | null;
+  billingAddress2?: string | null;
+  billingSuburb?: string | null;
+  billingState?: string | null;
+  billingPostcode?: string | null;
   email: string;
   phone: string;
 

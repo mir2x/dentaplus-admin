@@ -19,6 +19,29 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatCents } from '@/lib/format';
 import { OfferEditSheet } from './offer-edit-sheet';
 
+/**
+ * ANY_VARIANT/SPECIFIC offers can be created with no trigger yet (an "empty
+ * shell" attached to a product later from that product's edit page) — the
+ * backend deliberately keeps those inert rather than treating them as
+ * general/whole-cart, so the label here must not claim they're live storewide.
+ */
+function describeAppliesTo(o: Offer): string {
+  if (o.triggerProducts?.length) {
+    return o.triggerProducts.length === 1
+      ? o.triggerProducts[0].name
+      : `${o.triggerProducts.length} products`;
+  }
+  if (o.triggerVariants?.length) {
+    return o.triggerVariants.length === 1
+      ? (o.triggerVariants[0].name ?? o.triggerVariants[0].sku ?? '1 variant')
+      : `${o.triggerVariants.length} variants`;
+  }
+  if (o.freeScope === 'ANY_VARIANT' || o.freeScope === 'SPECIFIC') {
+    return 'Not yet attached';
+  }
+  return 'General (whole cart)';
+}
+
 export function describeReward(o: Offer): string {
   if (o.rewardType === 'FIXED_DISCOUNT') return `${formatCents(o.discountAmountCents ?? 0)} off`;
   if (o.rewardType === 'PERCENTAGE_DISCOUNT') return `${(o.discountBps ?? 0) / 100}% off`;
@@ -75,12 +98,14 @@ export function OffersView() {
               data.map((o) => (
                 <TableRow key={o.id} className="cursor-pointer" onClick={() => setEditing(o)}>
                   <TableCell className="font-medium">{o.name}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {o.triggerProducts?.length
-                      ? o.triggerProducts.length === 1
-                        ? o.triggerProducts[0].name
-                        : `${o.triggerProducts.length} products`
-                      : 'General (whole cart)'}
+                  <TableCell className="text-sm">
+                    {!o.triggerProducts?.length &&
+                    !o.triggerVariants?.length &&
+                    (o.freeScope === 'ANY_VARIANT' || o.freeScope === 'SPECIFIC') ? (
+                      <span className="font-medium text-amber-600">{describeAppliesTo(o)}</span>
+                    ) : (
+                      <span className="text-muted-foreground">{describeAppliesTo(o)}</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{o.minQuantity}+</TableCell>
                   <TableCell className="text-sm">{describeReward(o)}</TableCell>

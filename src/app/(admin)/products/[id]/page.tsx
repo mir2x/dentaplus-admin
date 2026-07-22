@@ -4,11 +4,11 @@ import { use, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, Search, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   Category,
-  ProductBadge,
+  Collection,
   ProductDetail,
   ProductType,
   QboProductSnapshot,
@@ -30,7 +30,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ProductImagesPanel } from '@/components/products/product-images-panel';
-import { ProductBadgeImagesPanel } from '@/components/products/product-badge-images-panel';
 import { ProductBannerPanel } from '@/components/products/product-banner-panel';
 import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel';
 import { VariantsManager } from '@/components/products/variants-manager';
@@ -264,29 +263,6 @@ function ProductView({ product }: { product: ProductDetail }) {
           <ProductBannerPanel productId={product.id} />
         </Section>
 
-        <Section title="Badges">
-          <div className="flex flex-wrap gap-2">
-            {product.badges.length ? (
-              product.badges.map(({ badge, imageUrl }) => (
-                <div key={badge.id} className="flex items-center gap-1.5">
-                  {imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imageUrl} alt={badge.label} className="size-6 rounded object-cover" />
-                  )}
-                  <span
-                    className="rounded-full px-2 py-0.5 text-xs text-white"
-                    style={{ backgroundColor: badge.color ?? '#2563eb' }}
-                  >
-                    {badge.label}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <span className="text-sm text-muted-foreground">No badges</span>
-            )}
-          </div>
-        </Section>
-
         <Section title="Wholesale pricing">
           {product.hasVariant ? (
             <p className="text-xs text-muted-foreground">
@@ -379,16 +355,16 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   const [taxStatus, setTaxStatus] = useState(product.taxStatus ?? 'taxable');
   const [taxClass, setTaxClass] = useState(product.taxClass ?? '');
 
-  const [badgeIds, setBadgeIds] = useState<string[]>(product.badges.map((b) => b.badge.id));
   const [categoryIds, setCategoryIds] = useState<string[]>(
     product.categories.map((c) => c.category.id),
   );
+  const [categorySearch, setCategorySearch] = useState('');
   const [tagIds, setTagIds] = useState<string[]>(product.tags.map((t) => t.tag.id));
+  const [collectionIds, setCollectionIds] = useState<string[]>(
+    product.collections.map((c) => c.collection.id),
+  );
+  const [collectionSearch, setCollectionSearch] = useState('');
 
-  const { data: allBadges } = useQuery<ProductBadge[]>({
-    queryKey: ['badges'],
-    queryFn: async () => (await api.get('/admin/badges')).data,
-  });
   const { data: allCategories } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => (await api.get('/admin/categories')).data,
@@ -396,6 +372,10 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   const { data: allTags } = useQuery<Tag[]>({
     queryKey: ['tags'],
     queryFn: async () => (await api.get('/admin/tags')).data,
+  });
+  const { data: allCollections } = useQuery<Collection[]>({
+    queryKey: ['collections'],
+    queryFn: async () => (await api.get('/admin/collections')).data,
   });
 
   const save = useMutation({
@@ -439,6 +419,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
       });
       await api.put(`/admin/products/${product.id}/categories`, { categoryIds });
       await api.put(`/admin/products/${product.id}/tags`, { tagIds });
+      await api.put(`/admin/products/${product.id}/collections`, { collectionIds });
     },
     onSuccess: () => {
       toast.success('Product saved');
@@ -447,24 +428,6 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
     },
     onError: () => toast.error('Failed to save product'),
   });
-
-  const toggleBadgeMutation = useMutation({
-    mutationFn: (next: string[]) => api.put(`/admin/products/${product.id}/badges`, { badgeIds: next }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-badges', product.id] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-    },
-    onError: () => toast.error('Failed to update badges'),
-  });
-
-  // Badge membership is applied immediately (unlike the rest of the form) so an
-  // assignment row exists right away for ProductBadgeImagesPanel to attach an image to.
-  const toggleBadge = (id: string) =>
-    setBadgeIds((cur) => {
-      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
-      toggleBadgeMutation.mutate(next);
-      return next;
-    });
 
   const categoryNameById = new Map<string, string>();
   const categoryParentNameById = new Map<string, string>();
@@ -492,11 +455,42 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
       return [...cur, id];
     });
 
+  const categorySearchLower = categorySearch.trim().toLowerCase();
+  const filteredCategories = categorySearchLower
+    ? (allCategories ?? [])
+        .map((cat) => {
+          const parentMatches = cat.name.toLowerCase().includes(categorySearchLower);
+          return {
+            ...cat,
+            children: parentMatches
+              ? cat.children
+              : cat.children.filter((child) =>
+                  child.name.toLowerCase().includes(categorySearchLower),
+                ),
+          };
+        })
+        .filter(
+          (cat) =>
+            cat.name.toLowerCase().includes(categorySearchLower) || cat.children.length > 0,
+        )
+    : (allCategories ?? []);
+
   const tagNameById = new Map<string, string>();
   allTags?.forEach((tag) => tagNameById.set(tag.id, tag.name));
 
   const toggleTag = (id: string) =>
     setTagIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+
+  const collectionNameById = new Map<string, string>();
+  allCollections?.forEach((c) => collectionNameById.set(c.id, c.title));
+
+  const toggleCollection = (id: string) =>
+    setCollectionIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+
+  const collectionSearchLower = collectionSearch.trim().toLowerCase();
+  const filteredCollections = collectionSearchLower
+    ? (allCollections ?? []).filter((c) => c.title.toLowerCase().includes(collectionSearchLower))
+    : (allCollections ?? []);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -666,37 +660,6 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           <ProductBannerPanel productId={product.id} />
         </Section>
 
-        <Section title="Badges / Stickers">
-          {allBadges?.length ? (
-            <div className="flex flex-wrap gap-2">
-              {allBadges.map((b) => {
-                const active = badgeIds.includes(b.id);
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => toggleBadge(b.id)}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${
-                      active ? 'border-transparent text-white' : 'border-input text-muted-foreground hover:bg-muted'
-                    }`}
-                    style={active ? { backgroundColor: b.color ?? '#2563eb' } : undefined}
-                  >
-                    {active && <Check className="size-3" />}
-                    {b.label}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">No badges defined yet — create them under Marketing → Badges.</p>
-          )}
-          <p className="mt-1 text-xs text-muted-foreground">Applied immediately.</p>
-
-          <div className="mt-3 border-t pt-3">
-            <ProductBadgeImagesPanel productId={product.id} />
-          </div>
-        </Section>
-
         <Section title="Categories">
           <div className="mb-3">
             <p className="mb-1.5 text-xs font-medium text-muted-foreground">
@@ -737,27 +700,52 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           </div>
 
           {allCategories?.length ? (
-            <div className="rounded-md border divide-y max-h-56 overflow-y-auto">
-              {allCategories.map((cat) => (
-                <div key={cat.id}>
-                  <PickerRow
-                    id={cat.id}
-                    name={cat.name}
-                    selected={categoryIds.includes(cat.id)}
-                    onToggle={toggleCategory}
-                  />
-                  {cat.children.map((child) => (
-                    <PickerRow
-                      key={child.id}
-                      id={child.id}
-                      name={child.name}
-                      selected={categoryIds.includes(child.id)}
-                      indent
-                      onToggle={toggleCategory}
-                    />
-                  ))}
-                </div>
-              ))}
+            <div className="flex h-56 flex-col overflow-hidden rounded-md border">
+              <div className="relative border-b shrink-0">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={categorySearch}
+                  placeholder="Search categories…"
+                  onChange={(e) => setCategorySearch(e.target.value)}
+                  className="rounded-none border-0 pl-8 pr-8 focus-visible:ring-0"
+                />
+                {categorySearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCategorySearch('')}
+                    aria-label="Clear search"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 overflow-y-auto divide-y">
+                {filteredCategories.length ? (
+                  filteredCategories.map((cat) => (
+                    <div key={cat.id}>
+                      <PickerRow
+                        id={cat.id}
+                        name={cat.name}
+                        selected={categoryIds.includes(cat.id)}
+                        onToggle={toggleCategory}
+                      />
+                      {cat.children.map((child) => (
+                        <PickerRow
+                          key={child.id}
+                          id={child.id}
+                          name={child.name}
+                          selected={categoryIds.includes(child.id)}
+                          indent
+                          onToggle={toggleCategory}
+                        />
+                      ))}
+                    </div>
+                  ))
+                ) : (
+                  <p className="px-3 py-2 text-xs text-muted-foreground">No categories match.</p>
+                )}
+              </div>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">No categories defined.</p>
@@ -811,6 +799,81 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">No tags defined.</p>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
+        </Section>
+
+        <Section title="Collections">
+          <div className="mb-3">
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+              Assigned ({collectionIds.length})
+            </p>
+            {collectionIds.length ? (
+              <div className="flex flex-wrap gap-1.5">
+                {collectionIds.map((id) => {
+                  const name = collectionNameById.get(id) ?? id;
+                  return (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs"
+                    >
+                      {name}
+                      <button
+                        type="button"
+                        onClick={() => toggleCollection(id)}
+                        aria-label={`Remove ${name}`}
+                        className="rounded-full p-0.5 hover:bg-muted-foreground/20"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No collections assigned.</p>
+            )}
+          </div>
+
+          {allCollections?.length ? (
+            <div className="flex h-56 flex-col overflow-hidden rounded-md border">
+              <div className="relative border-b shrink-0">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={collectionSearch}
+                  placeholder="Search collections…"
+                  onChange={(e) => setCollectionSearch(e.target.value)}
+                  className="rounded-none border-0 pl-8 pr-8 focus-visible:ring-0"
+                />
+                {collectionSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCollectionSearch('')}
+                    aria-label="Clear search"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 overflow-y-auto divide-y">
+                {filteredCollections.length ? (
+                  filteredCollections.map((c) => (
+                    <PickerRow
+                      key={c.id}
+                      id={c.id}
+                      name={c.title}
+                      selected={collectionIds.includes(c.id)}
+                      onToggle={toggleCollection}
+                    />
+                  ))
+                ) : (
+                  <p className="px-3 py-2 text-xs text-muted-foreground">No collections match.</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No collections defined.</p>
           )}
           <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
         </Section>

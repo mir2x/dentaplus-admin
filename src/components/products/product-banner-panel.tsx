@@ -32,7 +32,7 @@ export function ProductBannerPanel({ productId }: { productId: string }) {
   });
 
   const attached = banners?.filter((b) => b.productId === productId) ?? [];
-  const unattached = banners?.filter((b) => b.productId === null) ?? [];
+  const unattached = banners?.filter((b) => b.type === 'PRODUCT' && b.productId === null) ?? [];
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['banners'] });
 
@@ -69,7 +69,13 @@ export function ProductBannerPanel({ productId }: { productId: string }) {
       form.append('file', file);
       form.append('folder', 'banners');
       const { data: uploaded } = await api.post('/admin/upload', form);
-      await api.post('/admin/banners', { imageUrl: uploaded.url, productId });
+      const label = file.name.replace(/\.[^./]+$/, '');
+      await api.post('/admin/banners', {
+        imageUrl: uploaded.url,
+        productId,
+        type: 'PRODUCT',
+        label,
+      });
       toast.success('Banner added');
       refresh();
     } catch {
@@ -90,6 +96,7 @@ export function ProductBannerPanel({ productId }: { productId: string }) {
               <img src={b.imageUrl} alt="" className="h-12 w-24 rounded object-cover" />
               <div className="flex flex-1 items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{b.label || 'Untitled'}</span>
                   <Switch
                     checked={b.isActive}
                     onCheckedChange={(v) => toggleActive.mutate({ bannerId: b.id, isActive: v })}
@@ -120,7 +127,7 @@ export function ProductBannerPanel({ productId }: { productId: string }) {
             <SelectTrigger className="flex-1"><SelectValue placeholder="Choose an unattached banner…" /></SelectTrigger>
             <SelectContent>
               {unattached.map((b) => (
-                <SelectItem key={b.id} value={b.id}>{b.imageUrl.split('/').pop()}</SelectItem>
+                <SelectItem key={b.id} value={b.id}>{b.label || b.imageUrl.split('/').pop()}</SelectItem>
               ))}
             </SelectContent>
           </Select>

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Upload, X } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Category, ProductBadge, ProductType } from '@/types/api';
+import { Category, Collection, ProductType } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -88,16 +88,15 @@ export default function NewProductPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [badgeIds, setBadgeIds] = useState<string[]>([]);
+  const [collectionIds, setCollectionIds] = useState<string[]>([]);
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => (await api.get('/admin/categories')).data,
   });
-
-  const { data: allBadges } = useQuery<ProductBadge[]>({
-    queryKey: ['badges'],
-    queryFn: async () => (await api.get('/admin/badges')).data,
+  const { data: collections } = useQuery<Collection[]>({
+    queryKey: ['collections'],
+    queryFn: async () => (await api.get('/admin/collections')).data,
   });
 
   async function handleFile(file: File) {
@@ -148,8 +147,8 @@ export default function NewProductPage() {
       if (categoryIds.length > 0) {
         await api.put(`/admin/products/${data.id}/categories`, { categoryIds });
       }
-      if (badgeIds.length > 0) {
-        await api.put(`/admin/products/${data.id}/badges`, { badgeIds });
+      if (collectionIds.length > 0) {
+        await api.put(`/admin/products/${data.id}/collections`, { collectionIds });
       }
       return data;
     },
@@ -257,36 +256,27 @@ export default function NewProductPage() {
           )}
         </div>
 
-        {/* ── Badges ── */}
+        {/* ── Collections ── */}
         <div className="space-y-1.5">
-          <Label>Badges / Stickers</Label>
-          {allBadges?.length ? (
-            <div className="flex flex-wrap gap-2">
-              {allBadges.map((b) => {
-                const active = badgeIds.includes(b.id);
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() =>
-                      setBadgeIds((cur) =>
-                        cur.includes(b.id) ? cur.filter((x) => x !== b.id) : [...cur, b.id],
-                      )
-                    }
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                      active
-                        ? 'border-transparent text-white'
-                        : 'border-input text-muted-foreground hover:bg-muted'
-                    }`}
-                    style={active ? { backgroundColor: b.color ?? '#2563eb' } : undefined}
-                  >
-                    {b.label}
-                  </button>
-                );
-              })}
+          <Label>Collections</Label>
+          {collections?.length ? (
+            <div className="rounded-md border divide-y max-h-48 overflow-y-auto">
+              {collections.map((c) => (
+                <CategoryRow
+                  key={c.id}
+                  id={c.id}
+                  name={c.title}
+                  selected={collectionIds.includes(c.id)}
+                  onToggle={(id) =>
+                    setCollectionIds((cur) =>
+                      cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
+                    )
+                  }
+                />
+              ))}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">No badges defined yet.</p>
+            <p className="text-xs text-muted-foreground">No collections found.</p>
           )}
         </div>
 

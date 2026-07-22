@@ -40,7 +40,10 @@ export function BannersView() {
           <TableHeader>
             <TableRow>
               <TableHead>Image</TableHead>
-              <TableHead>Attached product</TableHead>
+              <TableHead>Label</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Target</TableHead>
+              <TableHead className="text-center">Priority</TableHead>
               <TableHead className="text-center">Status</TableHead>
               <TableHead>Created</TableHead>
             </TableRow>
@@ -49,7 +52,7 @@ export function BannersView() {
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 4 }).map((_, j) => (
+                  {Array.from({ length: 7 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -63,9 +66,24 @@ export function BannersView() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={b.imageUrl} alt="" className="h-10 w-20 rounded border object-cover" />
                   </TableCell>
-                  <TableCell className="text-sm">
-                    {b.product ? b.product.name : <span className="text-muted-foreground">Unattached</span>}
+                  <TableCell className="font-medium">{b.label || '—'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {b.type === 'PAGE' ? 'Page' : 'Product'}
                   </TableCell>
+                  <TableCell className="text-sm">
+                    {b.type === 'PAGE' ? (
+                      b.path ? (
+                        <span className="font-mono text-xs">/{b.path}</span>
+                      ) : (
+                        <span className="text-muted-foreground">No path</span>
+                      )
+                    ) : b.product ? (
+                      b.product.name
+                    ) : (
+                      <span className="text-muted-foreground">Unattached</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center text-sm">{b.priority}</TableCell>
                   <TableCell className="text-center">
                     <Badge variant={b.isActive ? 'default' : 'secondary'}>
                       {b.isActive ? 'Active' : 'Inactive'}
@@ -76,7 +94,7 @@ export function BannersView() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No banners yet
                 </TableCell>
               </TableRow>

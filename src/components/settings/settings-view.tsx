@@ -27,8 +27,6 @@ const EMAIL_EXPORT_RANGES = [
 
 interface Settings {
   gstDivisor: number;
-  freeShippingThresholdCents: number;
-  flatShippingCents: number;
   invoiceDueDays: number;
   backOrderReplyDays: number;
   cataloguePdfUrl: string | null;
@@ -44,8 +42,6 @@ type NumericSettingKeys = keyof Omit<
 
 const FIELDS: { key: NumericSettingKeys; label: string; hint: string }[] = [
   { key: 'gstDivisor', label: 'GST divisor', hint: 'Tax extracted from GST-inclusive totals (11 = 10% GST)' },
-  { key: 'freeShippingThresholdCents', label: 'Free shipping threshold (cents)', hint: 'Orders at/above this ship free' },
-  { key: 'flatShippingCents', label: 'Flat shipping (cents)', hint: 'Charged below the free-shipping threshold' },
   { key: 'invoiceDueDays', label: 'Invoice due (days)', hint: 'Default payment terms for new invoices' },
   { key: 'backOrderReplyDays', label: 'Back order reply window (days)', hint: 'Auto-decline a back order if the customer hasn’t replied within this many days' },
 ];

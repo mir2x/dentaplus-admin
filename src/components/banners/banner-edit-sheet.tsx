@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Banner } from '@/types/api';
+import { Banner, BannerType } from '@/types/api';
 import {
   Sheet,
   SheetContent,
@@ -13,8 +13,21 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const TYPE_OPTIONS: { value: BannerType; label: string }[] = [
+  { value: 'PRODUCT', label: 'Product' },
+  { value: 'PAGE', label: 'Page' },
+];
 
 interface Props {
   editing: Banner | 'new' | null;
@@ -38,7 +51,11 @@ function BannerForm({ editing, onClose }: { editing: Banner | 'new'; onClose: ()
   const isEdit = editing !== 'new';
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [label, setLabel] = useState(isEdit ? editing.label : '');
+  const [type, setType] = useState<BannerType>(isEdit ? editing.type : 'PRODUCT');
+  const [path, setPath] = useState(isEdit ? (editing.path ?? '') : '');
   const [imageUrl, setImageUrl] = useState(isEdit ? editing.imageUrl : '');
+  const [priority, setPriority] = useState(isEdit ? String(editing.priority) : '0');
   const [isActive, setIsActive] = useState(isEdit ? editing.isActive : true);
   const [uploading, setUploading] = useState(false);
 
@@ -62,7 +79,14 @@ function BannerForm({ editing, onClose }: { editing: Banner | 'new'; onClose: ()
 
   const save = useMutation({
     mutationFn: () => {
-      const payload = { imageUrl, isActive };
+      const payload = {
+        label,
+        imageUrl,
+        type,
+        priority: Number(priority) || 0,
+        isActive,
+        ...(type === 'PAGE' ? { path } : {}),
+      };
       return isEdit
         ? api.patch(`/admin/banners/${editing.id}`, payload)
         : api.post('/admin/banners', payload);
@@ -95,6 +119,8 @@ function BannerForm({ editing, onClose }: { editing: Banner | 'new'; onClose: ()
     onError: () => toast.error('Delete failed'),
   });
 
+  const canSave = !!imageUrl && !!label && (type === 'PRODUCT' || !!path.trim());
+
   return (
     <>
       <SheetHeader className="mb-4">
@@ -102,6 +128,27 @@ function BannerForm({ editing, onClose }: { editing: Banner | 'new'; onClose: ()
       </SheetHeader>
 
       <div className="space-y-4 px-4 pb-6">
+        <div className="space-y-1.5">
+          <Label>Label</Label>
+          <Input
+            value={label}
+            placeholder="e.g. Winter sale hero"
+            onChange={(e) => setLabel(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Type</Label>
+          <Select value={type} onValueChange={(v) => setType((v ?? 'PRODUCT') as BannerType)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {TYPE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="space-y-1.5">
           <Label>Image</Label>
           {imageUrl && (
@@ -135,31 +182,55 @@ function BannerForm({ editing, onClose }: { editing: Banner | 'new'; onClose: ()
         </div>
 
         <div className="space-y-1.5">
-          <Label>Attached product</Label>
-          {isEdit && editing.product ? (
-            <div className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm">
-              <span className="truncate font-medium">{editing.product.name}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive"
-                disabled={detach.isPending}
-                onClick={() => detach.mutate()}
-              >
-                Detach
-              </Button>
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Not attached. Attach it from the product&apos;s edit page.
-            </p>
-          )}
+          <Label>Priority</Label>
+          <Input
+            type="number"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">Higher priority banners show first.</p>
         </div>
+
+        {type === 'PAGE' ? (
+          <div className="space-y-1.5">
+            <Label>Page path</Label>
+            <Input
+              value={path}
+              placeholder="e.g. categories/test"
+              onChange={(e) => setPath(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              The storefront path this banner links to, without the domain (e.g. &quot;categories/test&quot;).
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <Label>Attached product</Label>
+            {isEdit && editing.product ? (
+              <div className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm">
+                <span className="truncate font-medium">{editing.product.name}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  disabled={detach.isPending}
+                  onClick={() => detach.mutate()}
+                >
+                  Detach
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Not attached. Attach it from the product&apos;s edit page.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-2 pt-2">
           <Button
             className="flex-1"
-            disabled={save.isPending || !imageUrl}
+            disabled={save.isPending || !canSave}
             onClick={() => save.mutate()}
           >
             {save.isPending ? 'Saving…' : isEdit ? 'Save' : 'Create'}

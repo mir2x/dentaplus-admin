@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Order, OrderFulfillmentStatus, OrderPaymentStatus, PaginatedResponse } from '@/types/api';
 import {
@@ -47,6 +47,7 @@ const LIMIT = 25;
 
 export function OrdersView() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [fulfillmentStatus, setFulfillmentStatus] = useState('all');
   const [paymentStatus, setPaymentStatus] = useState('all');
   const [search, setSearch] = useState('');
@@ -56,6 +57,16 @@ export function OrdersView() {
     fn();
     setPage(1);
   }
+
+  // Visiting this page resets the sidebar's "new orders" badge to zero.
+  const markSeen = useMutation({
+    mutationFn: () => api.post('/admin/orders/mark-seen'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orders-new-count'] }),
+  });
+  useEffect(() => {
+    markSeen.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: result, isLoading } = useQuery<PaginatedResponse<Order>>({
     queryKey: ['orders', fulfillmentStatus, paymentStatus, search, page],

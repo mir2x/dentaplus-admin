@@ -36,6 +36,24 @@ export function AdminSidebar() {
     queryFn: async () => (await api.get<{ count: number }>('/admin/contact-messages/unread-count')).data.count,
     refetchInterval: 30_000,
   });
+  const { data: ordersNewCount } = useQuery({
+    queryKey: ['orders-new-count'],
+    queryFn: async () => (await api.get<{ count: number }>('/admin/orders/new-count')).data.count,
+    refetchInterval: 30_000,
+  });
+  const { data: creditApplicationsNewCount } = useQuery({
+    queryKey: ['credit-applications-new-count'],
+    queryFn: async () =>
+      (await api.get<{ count: number }>('/admin/credit-applications/new-count')).data.count,
+    refetchInterval: 30_000,
+  });
+
+  // href -> sidebar badge count. Zero/undefined renders no badge.
+  const badgeCounts: Record<string, number | undefined> = {
+    '/contact-messages': unreadContactCount,
+    '/orders': ordersNewCount,
+    '/credit-applications': creditApplicationsNewCount,
+  };
 
   const handleLogout = () => {
     logout();
@@ -53,22 +71,25 @@ export function AdminSidebar() {
           <SidebarGroup key={group.label ?? i}>
             {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
             <SidebarMenu>
-              {group.items.map(({ href, label, icon: Icon }) => (
-                <SidebarMenuItem key={href}>
-                  <SidebarMenuButton
-                    isActive={pathname.startsWith(href)}
-                    render={<Link href={href} />}
-                  >
-                    <Icon className="size-4" />
-                    {label}
-                  </SidebarMenuButton>
-                  {href === '/contact-messages' && !!unreadContactCount && (
-                    <SidebarMenuBadge className="bg-primary text-primary-foreground">
-                      {unreadContactCount}
-                    </SidebarMenuBadge>
-                  )}
-                </SidebarMenuItem>
-              ))}
+              {group.items.map(({ href, label, icon: Icon }) => {
+                const badgeCount = badgeCounts[href];
+                return (
+                  <SidebarMenuItem key={href}>
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith(href)}
+                      render={<Link href={href} />}
+                    >
+                      <Icon className="size-4" />
+                      {label}
+                    </SidebarMenuButton>
+                    {!!badgeCount && (
+                      <SidebarMenuBadge className="bg-primary text-primary-foreground">
+                        {badgeCount}
+                      </SidebarMenuBadge>
+                    )}
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroup>
         ))}

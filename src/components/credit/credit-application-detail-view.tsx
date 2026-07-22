@@ -109,26 +109,33 @@ export function CreditApplicationDetailView({ applicationId }: Props) {
             <Row
               label="Address"
               value={
-                [app.address1, app.address2, app.suburb, app.state, app.postcode, app.country]
+                [
+                  app.deliveryAddress1,
+                  app.deliveryAddress2,
+                  app.deliverySuburb,
+                  app.deliveryState,
+                  app.deliveryPostcode,
+                  app.country,
+                ]
                   .filter(Boolean)
                   .join(', ') || null
               }
             />
           </Group>
 
-          {(app.postalAddress1 || app.postalSuburb) && (
+          {(app.billingAddress1 || app.billingSuburb) && (
             <>
               <Separator />
-              <Group title="Postal address">
+              <Group title="Billing address">
                 <Row
                   label="Address"
                   value={
                     [
-                      app.postalAddress1,
-                      app.postalAddress2,
-                      app.postalSuburb,
-                      app.postalState,
-                      app.postalPostcode,
+                      app.billingAddress1,
+                      app.billingAddress2,
+                      app.billingSuburb,
+                      app.billingState,
+                      app.billingPostcode,
                     ]
                       .filter(Boolean)
                       .join(', ') || null
