@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { StaffMember } from '@/types/api';
@@ -40,6 +41,7 @@ function StaffForm({ editing, onClose }: { editing: StaffMember | 'new'; onClose
 
   const [email, setEmail] = useState(isEdit ? editing.email : '');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [displayName, setDisplayName] = useState(isEdit ? (editing.displayName ?? '') : '');
   const [isActive, setIsActive] = useState(isEdit ? editing.isActive : true);
   const [fullAccess, setFullAccess] = useState(isEdit ? editing.allowedPages.length === 0 : true);
@@ -95,12 +97,23 @@ function StaffForm({ editing, onClose }: { editing: StaffMember | 'new'; onClose
           />
         </Field>
         <Field label={isEdit ? 'Reset password (optional)' : 'Password'}>
-          <Input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={isEdit ? 'Leave blank to keep current password' : 'At least 8 characters'}
-          />
+          <div className="relative">
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={isEdit ? 'Leave blank to keep current password' : 'At least 8 characters'}
+              className="pr-8"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
         </Field>
         <Field label="Display name">
           <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
