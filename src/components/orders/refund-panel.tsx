@@ -98,7 +98,7 @@ export function RefundPanel({ order }: { order: Order }) {
             <div key={r.id} className="px-3 py-2 space-y-1">
               <div className="flex items-center justify-between gap-2 text-sm">
                 <span className="font-medium">
-                  {formatCents(r.amount * 100, r.currency)}
+                  {formatCents(r.amountCents, r.currency)}
                   {r.fullRefund && <span className="ml-1.5 text-xs text-muted-foreground">(full)</span>}
                 </span>
                 <span className="text-xs text-muted-foreground">{formatDateTime(r.refundedAt)}</span>

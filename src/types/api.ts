@@ -48,7 +48,7 @@ export interface Refund {
   id: string;
   orderId: string;
   fullRefund: boolean;
-  amount: number;
+  amountCents: number;
   currency: string;
   notes: string | null;
   reference: string | null;

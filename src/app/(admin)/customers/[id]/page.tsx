@@ -9,20 +9,12 @@ import { api } from '@/lib/api';
 import {
   Customer360,
   CustomerAddress,
-  CustomerRole,
   QboCustomerSnapshot,
 } from '@/types/api';
 import { formatCents, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { QuickbooksRefreshCard } from '@/components/shared/quickbooks-refresh-card';
 import { LoginAsButton } from '@/components/customers/login-as-button';
 
@@ -36,12 +28,6 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const { data: c, isLoading } = useQuery<Customer360>({
     queryKey: ['customer-360', id],
     queryFn: async () => (await api.get(`/admin/customers/${id}`)).data,
-  });
-
-  const { data: availableRoles } = useQuery<CustomerRole[]>({
-    queryKey: ['customer-roles'],
-    queryFn: async () => (await api.get('/admin/customer-roles')).data,
-    enabled: editing,
   });
 
   const refresh = () => {
@@ -201,14 +187,6 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                     Mark as loyal customer
                   </Button>
                 )}
-                <Select onValueChange={(v) => v && addRole.mutate(v as string)}>
-                  <SelectTrigger className="h-8 w-44"><SelectValue placeholder="Add role…" /></SelectTrigger>
-                  <SelectContent>
-                    {availableRoles
-                      ?.filter((r) => !c.roles.some((cr) => cr.role.key === r.key))
-                      .map((r) => <SelectItem key={r.id} value={r.key}>{r.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
               </div>
             )}
           </Section>
