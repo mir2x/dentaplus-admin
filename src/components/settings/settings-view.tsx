@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 const EMAIL_EXPORT_RANGES = [
   { value: 'day', label: 'Last day' },
@@ -33,11 +34,20 @@ interface Settings {
   siteLogoUrl: string | null;
   faviconUrl: string | null;
   siteTitle: string | null;
+  contactAddress: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  officeHours: string | null;
+  facebookUrl: string | null;
+  pinterestUrl: string | null;
+  linkedinUrl: string | null;
+  twitterUrl: string | null;
+  instagramUrl: string | null;
 }
 
 type NumericSettingKeys = keyof Omit<
   Settings,
-  'cataloguePdfUrl' | 'siteLogoUrl' | 'faviconUrl' | 'siteTitle'
+  'cataloguePdfUrl' | 'siteLogoUrl' | 'faviconUrl' | 'siteTitle' | 'contactAddress' | 'contactPhone' | 'contactEmail' | 'officeHours' | 'facebookUrl' | 'pinterestUrl' | 'linkedinUrl' | 'twitterUrl' | 'instagramUrl'
 >;
 
 const FIELDS: { key: NumericSettingKeys; label: string; hint: string }[] = [
@@ -306,6 +316,125 @@ export function SettingsView() {
             <p className="text-xs text-muted-foreground">
               Shown as the browser tab icon. Square images work best.
             </p>
+          </div>
+
+          <Button disabled={save.isPending} onClick={() => save.mutate(merged)}>
+            {save.isPending ? 'Saving…' : 'Save settings'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Contact Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="contactAddress">Address</Label>
+            <Textarea
+              id="contactAddress"
+              value={merged.contactAddress ?? ''}
+              onChange={(e) => setEdits((prev) => ({ ...prev, contactAddress: e.target.value || null }))}
+              placeholder="Unit 5, 4A Bessemer Street, Blacktown, NSW 2148, Australia"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="contactPhone">Phone</Label>
+            <Input
+              id="contactPhone"
+              value={merged.contactPhone ?? ''}
+              onChange={(e) => setEdits((prev) => ({ ...prev, contactPhone: e.target.value || null }))}
+              placeholder="+61 433 545 039"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="contactEmail">Email</Label>
+            <Textarea
+              id="contactEmail"
+              value={merged.contactEmail ?? ''}
+              onChange={(e) => setEdits((prev) => ({ ...prev, contactEmail: e.target.value || null }))}
+              placeholder="info@dentaplus.com.au&#10;sales@dentaplus.com.au"
+            />
+            <p className="text-xs text-muted-foreground">Use a new line for each email address.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="officeHours">Office Hours</Label>
+            <Textarea
+              id="officeHours"
+              value={merged.officeHours ?? ''}
+              onChange={(e) => setEdits((prev) => ({ ...prev, officeHours: e.target.value || null }))}
+              placeholder="Mon - Fri: 9.00am-5:00pm&#10;Sat - Sun: Closed"
+            />
+            <p className="text-xs text-muted-foreground">Use a new line for each entry.</p>
+          </div>
+
+          <Button disabled={save.isPending} onClick={() => save.mutate(merged)}>
+            {save.isPending ? 'Saving…' : 'Save settings'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Social Links</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 max-w-xl">
+          <div className="space-y-1.5">
+            <Label htmlFor="facebookUrl">Facebook URL</Label>
+            <Input
+              id="facebookUrl"
+              type="url"
+              value={merged.facebookUrl ?? ''}
+              onChange={(e) => setEdits((prev) => ({ ...prev, facebookUrl: e.target.value || null }))}
+              placeholder="https://www.facebook.com/..."
+            />
+          </div>
+          
+          <div className="space-y-1.5">
+            <Label htmlFor="pinterestUrl">Pinterest URL</Label>
+            <Input
+              id="pinterestUrl"
+              type="url"
+              value={merged.pinterestUrl ?? ''}
+              onChange={(e) => setEdits((prev) => ({ ...prev, pinterestUrl: e.target.value || null }))}
+              placeholder="https://au.pinterest.com/..."
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+            <Input
+              id="linkedinUrl"
+              type="url"
+              value={merged.linkedinUrl ?? ''}
+              onChange={(e) => setEdits((prev) => ({ ...prev, linkedinUrl: e.target.value || null }))}
+              placeholder="https://www.linkedin.com/..."
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="twitterUrl">X (Twitter) URL</Label>
+            <Input
+              id="twitterUrl"
+              type="url"
+              value={merged.twitterUrl ?? ''}
+              onChange={(e) => setEdits((prev) => ({ ...prev, twitterUrl: e.target.value || null }))}
+              placeholder="https://x.com/..."
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="instagramUrl">Instagram URL</Label>
+            <Input
+              id="instagramUrl"
+              type="url"
+              value={merged.instagramUrl ?? ''}
+              onChange={(e) => setEdits((prev) => ({ ...prev, instagramUrl: e.target.value || null }))}
+              placeholder="https://www.instagram.com/..."
+            />
           </div>
 
           <Button disabled={save.isPending} onClick={() => save.mutate(merged)}>

@@ -24,6 +24,7 @@ import {
   Mail,
   Star,
   Settings,
+  File,
   BarChart2,
   UserCog,
   type LucideIcon,
@@ -87,6 +88,7 @@ export const ADMIN_PAGE_GROUPS: AdminPageGroup[] = [
   {
     label: 'Content',
     items: [
+      { href: '/custom-pages', label: 'Pages', icon: File },
       { href: '/blog', label: 'Blog', icon: Newspaper },
       { href: '/faq', label: 'FAQ', icon: HelpCircle },
       { href: '/contact-messages', label: 'Contact', icon: Mail },
