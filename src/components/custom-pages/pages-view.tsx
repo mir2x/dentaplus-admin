@@ -73,7 +73,7 @@ export function PagesView() {
         <CardContent className="space-y-6">
           <div className="space-y-1.5 max-w-sm">
             <Label>Select Page</Label>
-            <Select value={selectedSlug} onValueChange={setSelectedSlug}>
+            <Select value={selectedSlug} onValueChange={(v) => setSelectedSlug(v ?? '')}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>

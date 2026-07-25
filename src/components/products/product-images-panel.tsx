@@ -61,15 +61,17 @@ export function ProductImagesPanel({ productId }: { productId: string }) {
           {images.map((img) => (
             <div key={img.id} className="group relative">
               <Dialog>
-                <DialogTrigger asChild>
-                  <button type="button" className="block overflow-hidden rounded border cursor-zoom-in bg-white dark:bg-zinc-950">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img.url}
-                      alt={img.altText ?? ''}
-                      className="size-32 object-contain transition-transform group-hover:scale-105"
-                    />
-                  </button>
+                <DialogTrigger
+                  render={
+                    <button type="button" className="block overflow-hidden rounded border cursor-zoom-in bg-white dark:bg-zinc-950" />
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.url}
+                    alt={img.altText ?? ''}
+                    className="size-32 object-contain transition-transform group-hover:scale-105"
+                  />
                 </DialogTrigger>
                 <DialogContent className="max-w-[90vw] sm:max-w-[90vw] h-[90vh] p-0 overflow-hidden bg-transparent border-0 shadow-none ring-0">
                   <DialogTitle className="sr-only">Image View</DialogTitle>
