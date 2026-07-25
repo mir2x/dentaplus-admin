@@ -11,6 +11,7 @@ import {
   RefreshCw,
   PackageX,
   Landmark,
+  Mail,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DashboardSummary } from '@/types/api';
@@ -33,6 +34,7 @@ export function DashboardView() {
     { label: 'Overdue invoices', value: data?.overdueInvoices, icon: AlertTriangle, href: '/invoices', alert: (data?.overdueInvoices ?? 0) > 0 },
     { label: 'Pending QBO pushes', value: data?.pendingQboPushes, icon: RefreshCw, href: '/quickbooks', alert: (data?.pendingQboPushes ?? 0) > 0 },
     { label: 'Out of stock', value: data?.inventory.outOfStock, sub: `${data?.inventory.lowStock ?? 0} low stock`, icon: PackageX, href: '/products?stock=out' },
+    { label: 'New contact messages', value: data?.newContactMessages, icon: Mail, href: '/contact-messages', alert: (data?.newContactMessages ?? 0) > 0 },
   ];
 
   return (

@@ -777,6 +777,7 @@ export interface DashboardSummary {
   grossSalesMtd: number;
   newCustomersMtd: number;
   pendingCreditApplications: number;
+  newContactMessages: number;
   overdueInvoices: number;
   pendingQboPushes: number;
   inventory: { lowStock: number; outOfStock: number };

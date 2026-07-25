@@ -7,7 +7,7 @@ import { Trash2, Upload } from 'lucide-react';
 import { api } from '@/lib/api';
 import { ProductImage } from '@/types/api';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export function ProductImagesPanel({ productId }: { productId: string }) {
   const queryClient = useQueryClient();
@@ -55,26 +55,41 @@ export function ProductImagesPanel({ productId }: { productId: string }) {
   });
 
   return (
-    <div className="space-y-2">
-      <Label>Images</Label>
-
+    <div className="space-y-4">
       {images?.length ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-4">
           {images.map((img) => (
             <div key={img.id} className="group relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={img.url}
-                alt={img.altText ?? ''}
-                className="size-20 rounded border object-cover"
-              />
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button type="button" className="block overflow-hidden rounded border cursor-zoom-in bg-white dark:bg-zinc-950">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.url}
+                      alt={img.altText ?? ''}
+                      className="size-32 object-contain transition-transform group-hover:scale-105"
+                    />
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-[90vw] sm:max-w-[90vw] h-[90vh] p-0 overflow-hidden bg-transparent border-0 shadow-none ring-0">
+                  <DialogTitle className="sr-only">Image View</DialogTitle>
+                  <div className="flex items-center justify-center w-full h-full">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.url}
+                      alt={img.altText ?? ''}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
               <button
                 type="button"
                 disabled={del.isPending}
                 onClick={() => del.mutate(img.id)}
-                className="absolute -right-2 -top-2 rounded-full bg-destructive p-1 text-white opacity-0 transition group-hover:opacity-100"
+                className="absolute -right-2 -top-2 rounded-full bg-destructive p-1.5 text-white opacity-0 shadow-md transition group-hover:opacity-100 hover:bg-destructive/90"
               >
-                <Trash2 className="size-3" />
+                <Trash2 className="size-4" />
               </button>
             </div>
           ))}
