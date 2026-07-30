@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { CustomerRole, WholesaleDiscountType, WholesaleRule } from '@/types/api';
+import { WholesaleDiscountType, WholesaleRule } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,14 +35,9 @@ export function WholesaleRulesPanel(props: Owner) {
     queryKey: ['wholesale-rules', ownerKey],
     queryFn: async () => (await api.get(basePath)).data,
   });
-  const { data: allRoles } = useQuery<CustomerRole[]>({
-    queryKey: ['customer-roles'],
-    queryFn: async () => (await api.get('/admin/customer-roles')).data,
-  });
-  // loyal_customer only gates catalog/search visibility — it never has its own price rule.
-  const roles = allRoles?.filter((role) => role.key !== 'loyal_customer');
-
-  const [roleKey, setRoleKey] = useState('wholesale_customer');
+  // Wholesale pricing only ever applies to the wholesale_customer role —
+  // loyal_customer just gates catalog/search visibility and has no price rule.
+  const roleKey = 'wholesale_customer';
   const [minQuantity, setMinQuantity] = useState('1');
   const [discountType, setDiscountType] = useState<WholesaleDiscountType>('PERCENTAGE');
   const [value, setValue] = useState('');
@@ -111,22 +106,7 @@ export function WholesaleRulesPanel(props: Owner) {
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="space-y-1">
           <Label className="text-xs">Role</Label>
-          <Select value={roleKey} onValueChange={(v) => setRoleKey(v ?? 'wholesale_customer')}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {roles?.length ? (
-                roles.map((role) => (
-                  <SelectItem key={role.id} value={role.key}>
-                    {role.name}
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="wholesale_customer">Wholesale customer</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+          <p className="flex h-9 items-center text-sm">Wholesale customer</p>
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Min quantity</Label>
