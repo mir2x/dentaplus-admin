@@ -497,9 +497,10 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
       <div className="lg:col-span-2 space-y-5">
         {isQbo && (
           <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-3">
-            Name, SKU and price are managed in QuickBooks and synced here. Stock is managed
-            here and pushed to QuickBooks. Edit the storefront fields (type, brand, sale
-            price, descriptions, visibility).
+            Name and SKU are managed in QuickBooks and synced here. Stock is managed here
+            and pushed to QuickBooks. Sale price is synced with QuickBooks&apos; unit price;
+            regular price is local to the storefront and never synced. Edit the storefront
+            fields (type, brand, regular/sale price, descriptions, visibility).
           </p>
         )}
 
@@ -546,7 +547,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           <Section title="Pricing & inventory">
             <div className="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
               <FieldRow label={`Regular (${currency})`}>
-                <Input type="number" step="0.01" value={regularPrice} disabled={isQbo} onChange={(e) => setRegularPrice(e.target.value)} />
+                <Input type="number" step="0.01" value={regularPrice} onChange={(e) => setRegularPrice(e.target.value)} />
               </FieldRow>
               <FieldRow label={`Sale (${currency})`}>
                 <Input type="number" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
