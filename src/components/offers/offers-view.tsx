@@ -99,13 +99,20 @@ export function OffersView() {
                 <TableRow key={o.id} className="cursor-pointer" onClick={() => setEditing(o)}>
                   <TableCell className="font-medium">{o.name}</TableCell>
                   <TableCell className="text-sm">
-                    {!o.triggerProducts?.length &&
-                    !o.triggerVariants?.length &&
-                    (o.freeScope === 'ANY_VARIANT' || o.freeScope === 'SPECIFIC') ? (
-                      <span className="font-medium text-amber-600">{describeAppliesTo(o)}</span>
-                    ) : (
-                      <span className="text-muted-foreground">{describeAppliesTo(o)}</span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {!o.triggerProducts?.length &&
+                      !o.triggerVariants?.length &&
+                      (o.freeScope === 'ANY_VARIANT' || o.freeScope === 'SPECIFIC') ? (
+                        <span className="font-medium text-amber-600">{describeAppliesTo(o)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">{describeAppliesTo(o)}</span>
+                      )}
+                      {o.triggerMode === 'COLLECTIVE' && (
+                        <Badge variant="outline" className="shrink-0">
+                          Collective
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{o.minQuantity}+</TableCell>
                   <TableCell className="text-sm">{describeReward(o)}</TableCell>

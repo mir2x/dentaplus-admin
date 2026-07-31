@@ -4,7 +4,7 @@ import { useState, type Dispatch, type SetStateAction } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Offer, OfferRewardType, FreeProductScope } from '@/types/api';
+import { Offer, OfferRewardType, FreeProductScope, OfferTriggerMode } from '@/types/api';
 import {
   Sheet,
   SheetContent,
@@ -44,6 +44,7 @@ interface FormState {
   name: string;
   description: string;
   minQuantity: number;
+  triggerMode: OfferTriggerMode;
   rewardType: OfferRewardType;
   discountAmountCents: string;
   discountBps: string;
@@ -64,6 +65,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           name: editing.name,
           description: editing.description ?? '',
           minQuantity: editing.minQuantity,
+          triggerMode: editing.triggerMode ?? 'INDIVIDUAL',
           rewardType: editing.rewardType,
           discountAmountCents: editing.discountAmountCents != null ? String(editing.discountAmountCents) : '',
           discountBps: editing.discountBps != null ? String(editing.discountBps) : '',
@@ -77,6 +79,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           name: '',
           description: '',
           minQuantity: 1,
+          triggerMode: 'INDIVIDUAL',
           rewardType: 'FIXED_DISCOUNT',
           discountAmountCents: '',
           discountBps: '',
@@ -94,6 +97,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
         name: form.name,
         description: form.description || undefined,
         minQuantity: form.minQuantity,
+        triggerMode: form.triggerMode,
         rewardType: form.rewardType,
         isActive: form.isActive,
         startsAt: form.startsAt || undefined,
@@ -159,6 +163,32 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           />
         </Field>
 
+        <Field label="Trigger mode">
+          <Select
+            value={form.triggerMode}
+            onValueChange={(v) => {
+              const triggerMode = (v as OfferTriggerMode) ?? 'INDIVIDUAL';
+              // Collective FREE_PRODUCT needs the customer to choose — there's
+              // no single variant left to auto-free once quantity is combined
+              // across variants (see backend OffersService.assertCollectiveFreeScope).
+              const freeScope =
+                triggerMode === 'COLLECTIVE' && form.freeScope === 'SAME' ? 'ANY_VARIANT' : form.freeScope;
+              setForm({ ...form, triggerMode, freeScope });
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="INDIVIDUAL">Individual (each variant counted on its own — default)</SelectItem>
+              <SelectItem value="COLLECTIVE">Collective (variant quantities combine toward one threshold)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground mt-1.5">
+            Only matters for variant products — a single non-variant product has nothing else to combine with.
+          </p>
+        </Field>
+
         {form.rewardType !== 'FREE_PRODUCT' && (
           <RewardTypeField form={form} setForm={setForm} />
         )}
@@ -204,11 +234,19 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SAME">Same product/variant purchased</SelectItem>
+                  {form.triggerMode !== 'COLLECTIVE' && (
+                    <SelectItem value="SAME">Same product/variant purchased</SelectItem>
+                  )}
                   <SelectItem value="ANY_VARIANT">Customer&apos;s choice (any variant of the trigger product)</SelectItem>
                   <SelectItem value="SPECIFIC">Admin choice (one or more variants of the trigger product)</SelectItem>
                 </SelectContent>
               </Select>
+              {form.triggerMode === 'COLLECTIVE' && (
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Collective offers combine quantity across variants, so there&apos;s no single variant to
+                  auto-free — the customer must choose.
+                </p>
+              )}
             </Field>
             {(form.freeScope === 'ANY_VARIANT' || form.freeScope === 'SPECIFIC') && (
               <p className="text-xs text-muted-foreground rounded-md bg-muted/40 p-2">

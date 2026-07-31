@@ -692,12 +692,19 @@ export type OfferRewardType = 'FIXED_DISCOUNT' | 'PERCENTAGE_DISCOUNT' | 'FREE_P
 // trigger product. SPECIFIC: admin-curated variant pool (freeVariants).
 // Both ANY_VARIANT and SPECIFIC require the trigger product to have variants.
 export type FreeProductScope = 'SAME' | 'SPECIFIC' | 'ANY_VARIANT';
+// INDIVIDUAL (default): each variant's own quantity must independently clear
+// minQuantity. COLLECTIVE: quantities across this offer's trigger variants
+// are summed per product toward one shared threshold — only meaningful for
+// variant products, and requires freeScope ANY_VARIANT/SPECIFIC (not SAME)
+// for FREE_PRODUCT offers.
+export type OfferTriggerMode = 'INDIVIDUAL' | 'COLLECTIVE';
 
 export interface Offer {
   id: string;
   name: string;
   description: string | null;
   minQuantity: number;
+  triggerMode: OfferTriggerMode;
   rewardType: OfferRewardType;
   discountAmountCents: number | null;
   discountBps: number | null;
