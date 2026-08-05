@@ -202,6 +202,12 @@ export interface Product {
   shortDescription: string | null;
   quickbooksItemId?: string | null;
   brand: string | null;
+  supplier?: string | null;
+  costCents?: number | null;
+  quickbooksIncomeAccountId?: string | null;
+  quickbooksExpenseAccountId?: string | null;
+  quickbooksAssetAccountId?: string | null;
+  quickbooksTaxCodeId?: string | null;
   prices: ProductPrice[];
   inventory: { inStock: boolean | null; quantity: number | null; backordersAllowed: boolean } | null;
   categories: { category: { id: string; name: string; slug: string } }[];
@@ -217,6 +223,12 @@ export interface ProductVariantDetail {
   regularCents: number | null;
   saleCents: number | null;
   thumbnailUrl?: string | null;
+  supplier?: string | null;
+  costCents?: number | null;
+  quickbooksIncomeAccountId?: string | null;
+  quickbooksExpenseAccountId?: string | null;
+  quickbooksAssetAccountId?: string | null;
+  quickbooksTaxCodeId?: string | null;
   quickbooksItemId?: string | null;
   quickbooksSyncedAt?: string | null;
   isActive: boolean;
@@ -265,6 +277,12 @@ export interface ProductDetail extends Product {
   attributes: { id: string; productId: string; attributeName: string; value: string }[];
   variants: ProductVariantDetail[];
   wholesaleRules: WholesaleRule[];
+}
+
+/** A pickable QuickBooks Account or TaxCode option (GET /admin/quickbooks/accounts|tax-codes). */
+export interface QboPickerOption {
+  id: string;
+  name: string;
 }
 
 /** Raw QuickBooks snapshots (on-demand refresh). */

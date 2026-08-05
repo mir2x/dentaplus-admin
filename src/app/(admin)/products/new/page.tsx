@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { QuickbooksRefSelect } from '@/components/products/quickbooks-ref-select';
 
 const TYPE_OPTIONS: { value: ProductType; label: string }[] = [
   { value: 'GENERAL', label: 'General' },
@@ -65,6 +66,14 @@ export default function NewProductPage() {
   // Pricing
   const [regularPrice, setRegularPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
+
+  // Purchasing & QuickBooks
+  const [supplier, setSupplier] = useState('');
+  const [cost, setCost] = useState('');
+  const [incomeAccountId, setIncomeAccountId] = useState('');
+  const [expenseAccountId, setExpenseAccountId] = useState('');
+  const [assetAccountId, setAssetAccountId] = useState('');
+  const [taxCodeId, setTaxCodeId] = useState('');
 
   // Descriptions
   const [shortDesc, setShortDesc] = useState('');
@@ -131,6 +140,12 @@ export default function NewProductPage() {
           : {
               regularPrice: regularPrice ? parseFloat(regularPrice) : 0,
               salePrice: salePrice ? parseFloat(salePrice) : undefined,
+              supplier: supplier || undefined,
+              cost: cost ? parseFloat(cost) : undefined,
+              quickbooksIncomeAccountId: incomeAccountId || undefined,
+              quickbooksExpenseAccountId: expenseAccountId || undefined,
+              quickbooksAssetAccountId: assetAccountId || undefined,
+              quickbooksTaxCodeId: taxCodeId || undefined,
             }),
         catalogVisibility,
         taxStatus,
@@ -289,6 +304,44 @@ export default function NewProductPage() {
             <Field label="Sale price ($)">
               <Input type="number" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
             </Field>
+          </div>
+        )}
+
+        {/* ── Purchasing & QuickBooks ── */}
+        {!hasVariant && (
+          <div className="border-t pt-4 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Purchasing & QuickBooks
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Cost ($)">
+                <Input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
+              </Field>
+              <Field label="Preferred supplier">
+                <Input
+                  placeholder="e.g. Henry Schein"
+                  value={supplier}
+                  onChange={(e) => setSupplier(e.target.value)}
+                />
+              </Field>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Supplier is matched or created as a Vendor in QuickBooks by this exact name.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Income account">
+                <QuickbooksRefSelect kind="income" value={incomeAccountId} onChange={setIncomeAccountId} />
+              </Field>
+              <Field label="Expense account">
+                <QuickbooksRefSelect kind="expense" value={expenseAccountId} onChange={setExpenseAccountId} />
+              </Field>
+              <Field label="Inventory asset account">
+                <QuickbooksRefSelect kind="asset" value={assetAccountId} onChange={setAssetAccountId} />
+              </Field>
+              <Field label="Purchase tax">
+                <QuickbooksRefSelect kind="taxcode" value={taxCodeId} onChange={setTaxCodeId} />
+              </Field>
+            </div>
           </div>
         )}
 

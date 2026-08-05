@@ -35,6 +35,7 @@ import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel
 import { VariantsManager } from '@/components/products/variants-manager';
 import { ProductOffersSection } from '@/components/products/product-offers-section';
 import { QuickbooksRefreshCard } from '@/components/shared/quickbooks-refresh-card';
+import { QuickbooksRefSelect } from '@/components/products/quickbooks-ref-select';
 import {
   InventoryStatus,
   InventoryStatusField,
@@ -354,6 +355,16 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   );
   const [taxStatus, setTaxStatus] = useState(product.taxStatus ?? 'taxable');
   const [taxClass, setTaxClass] = useState(product.taxClass ?? '');
+  const [supplier, setSupplier] = useState(product.supplier ?? '');
+  const [cost, setCost] = useState(
+    product.costCents != null ? (product.costCents / 100).toFixed(2) : '',
+  );
+  const [incomeAccountId, setIncomeAccountId] = useState(product.quickbooksIncomeAccountId ?? '');
+  const [expenseAccountId, setExpenseAccountId] = useState(
+    product.quickbooksExpenseAccountId ?? '',
+  );
+  const [assetAccountId, setAssetAccountId] = useState(product.quickbooksAssetAccountId ?? '');
+  const [taxCodeId, setTaxCodeId] = useState(product.quickbooksTaxCodeId ?? '');
 
   const [categoryIds, setCategoryIds] = useState<string[]>(
     product.categories.map((c) => c.category.id),
@@ -411,6 +422,14 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             ...inventoryPayload,
             lowStockAmount: lowStockAmount !== '' ? parseInt(lowStockAmount, 10) : undefined,
             soldIndividually,
+            // Always sent (never `|| undefined`) so clearing a field back to
+            // "use default" reaches the backend as '' -> null, not "untouched".
+            supplier,
+            cost: cost ? parseFloat(cost) : undefined,
+            quickbooksIncomeAccountId: incomeAccountId,
+            quickbooksExpenseAccountId: expenseAccountId,
+            quickbooksAssetAccountId: assetAccountId,
+            quickbooksTaxCodeId: taxCodeId,
           };
       await api.patch(`/admin/products/${product.id}`, {
         ...storefront,
@@ -571,6 +590,58 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
                 <Label className="font-normal">Sold individually</Label>
                 <Switch checked={soldIndividually} onCheckedChange={setSoldIndividually} />
               </div>
+            </div>
+          </Section>
+        )}
+
+        {product.hasVariant ? (
+          <Section title="Purchasing & QuickBooks">
+            <p className="text-xs text-muted-foreground">
+              Managed per-variant — edit cost, supplier, and accounts on each variant below.
+            </p>
+          </Section>
+        ) : (
+          <Section title="Purchasing & QuickBooks">
+            <div className="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
+              <FieldRow label="Cost ($)">
+                <Input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
+              </FieldRow>
+              <FieldRow label="Preferred supplier">
+                <Input
+                  placeholder="e.g. Henry Schein"
+                  value={supplier}
+                  onChange={(e) => setSupplier(e.target.value)}
+                />
+              </FieldRow>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Supplier is matched or created as a Vendor in QuickBooks by this exact name.
+              Clearing an account/tax override here won&apos;t remove it from an
+              already-synced QuickBooks item — change it there instead.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FieldRow label="Income account">
+                <QuickbooksRefSelect kind="income" value={incomeAccountId} onChange={setIncomeAccountId} />
+              </FieldRow>
+              <FieldRow label="Expense account">
+                <QuickbooksRefSelect kind="expense" value={expenseAccountId} onChange={setExpenseAccountId} />
+              </FieldRow>
+              <FieldRow label="Inventory asset account">
+                <QuickbooksRefSelect
+                  kind="asset"
+                  value={assetAccountId}
+                  onChange={setAssetAccountId}
+                  disabled={isQbo}
+                />
+                {isQbo && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Locked — QuickBooks fixes the inventory asset account once an item exists.
+                  </p>
+                )}
+              </FieldRow>
+              <FieldRow label="Purchase tax">
+                <QuickbooksRefSelect kind="taxcode" value={taxCodeId} onChange={setTaxCodeId} />
+              </FieldRow>
             </div>
           </Section>
         )}
