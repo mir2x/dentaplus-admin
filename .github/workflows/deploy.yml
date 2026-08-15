@@ -1,0 +1,109 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: dentaplus-admin
+  CONTAINER_NAME: dentaplus-admin
+  HOST_PORT: 3001
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # NEXT_PUBLIC_* is baked into the client bundle at build time. If these are
+      # missing the build still succeeds but ships a bundle pointing at undefined,
+      # so fail here rather than discovering it in the browser.
+      - name: Verify build-time configuration
+        run: |
+          missing=0
+          for var in NEXT_PUBLIC_API_URL NEXT_PUBLIC_STOREFRONT_URL; do
+            if [ -z "${!var}" ]; then
+              echo "::error::Repository variable $var is not set"
+              missing=1
+            fi
+          done
+          exit $missing
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_STOREFRONT_URL: ${{ vars.NEXT_PUBLIC_STOREFRONT_URL }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production image
+        run: |
+          docker build --target production \
+            --build-arg NEXT_PUBLIC_API_URL="${{ vars.NEXT_PUBLIC_API_URL }}" \
+            --build-arg NEXT_PUBLIC_STOREFRONT_URL="${{ vars.NEXT_PUBLIC_STOREFRONT_URL }}" \
+            -t ${{ env.DOCKER_IMAGE }}:latest \
+            -t ${{ env.DOCKER_IMAGE }}:${{ github.sha }} .
+
+      - name: Save Docker image
+        run: |
+          docker save ${{ env.DOCKER_IMAGE }}:latest | gzip > image.tar.gz
+
+      - name: Copy image to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: 'image.tar.gz'
+          target: '/tmp/'
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+
+            # Load the new image
+            docker load < /tmp/image.tar.gz
+
+            # Shared network so a reverse proxy container can reach both apps
+            docker network inspect dentaplus-web >/dev/null 2>&1 \
+              || docker network create dentaplus-web
+
+            # Stop and remove the existing container (if any)
+            docker stop ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+            docker rm ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+
+            # Run the new container
+            docker run -d \
+              --name ${{ env.CONTAINER_NAME }} \
+              --restart unless-stopped \
+              --network dentaplus-web \
+              -p 127.0.0.1:${{ env.HOST_PORT }}:3000 \
+              --env-file /home/${{ secrets.EC2_USER }}/server/.env.admin \
+              -e NODE_ENV=production \
+              ${{ env.DOCKER_IMAGE }}:latest
+
+            # Clean up
+            docker image prune -f
+            rm /tmp/image.tar.gz
+
+            # Health check with retry
+            echo "Waiting for app to start..."
+            for i in {1..6}; do
+              sleep 10
+              if curl --fail --silent http://localhost:${{ env.HOST_PORT }}/api/health > /dev/null; then
+                echo "Deployment successful!"
+                exit 0
+              fi
+              echo "Attempt $i failed, retrying..."
+            done
+
+            echo "Health check failed after 60 seconds"
+            docker logs ${{ env.CONTAINER_NAME }} --tail 50
+            exit 1

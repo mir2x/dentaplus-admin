@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+coverage
+.git
+.github
+.agents
+.codex
+.env
+.env.*
+!.env.example
+package-lock.json
+*.log
+pnpm-debug.log*
+.DS_Store
+tsconfig.tsbuildinfo
