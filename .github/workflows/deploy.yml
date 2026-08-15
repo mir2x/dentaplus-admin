@@ -26,14 +26,14 @@ jobs:
           missing=0
           for var in NEXT_PUBLIC_API_URL NEXT_PUBLIC_STOREFRONT_URL; do
             if [ -z "${!var}" ]; then
-              echo "::error::Repository variable $var is not set"
+              echo "::error::Repository secret $var is not set"
               missing=1
             fi
           done
           exit $missing
         env:
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_STOREFRONT_URL: ${{ vars.NEXT_PUBLIC_STOREFRONT_URL }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_STOREFRONT_URL: ${{ secrets.NEXT_PUBLIC_STOREFRONT_URL }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -41,8 +41,8 @@ jobs:
       - name: Build production image
         run: |
           docker build --target production \
-            --build-arg NEXT_PUBLIC_API_URL="${{ vars.NEXT_PUBLIC_API_URL }}" \
-            --build-arg NEXT_PUBLIC_STOREFRONT_URL="${{ vars.NEXT_PUBLIC_STOREFRONT_URL }}" \
+            --build-arg NEXT_PUBLIC_API_URL="${{ secrets.NEXT_PUBLIC_API_URL }}" \
+            --build-arg NEXT_PUBLIC_STOREFRONT_URL="${{ secrets.NEXT_PUBLIC_STOREFRONT_URL }}" \
             -t ${{ env.DOCKER_IMAGE }}:latest \
             -t ${{ env.DOCKER_IMAGE }}:${{ github.sha }} .
 
