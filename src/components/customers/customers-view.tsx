@@ -118,10 +118,10 @@ export function CustomersView() {
                       {customer.displayName ??
                         (`${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() || '—')}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-muted-foreground text-sm max-w-48 truncate whitespace-normal break-words">
                       {customer.email}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-muted-foreground text-sm max-w-40 truncate whitespace-normal break-words">
                       {customer.profile?.company ?? '—'}
                     </TableCell>
                     <TableCell>

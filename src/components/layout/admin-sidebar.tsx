@@ -97,7 +97,12 @@ export function AdminSidebar() {
 
       <SidebarFooter className="px-4 py-4 border-t">
         <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-        <Button variant="ghost" size="sm" className="mt-1 w-full justify-start px-0" onClick={handleLogout}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-1 w-full justify-start rounded-md px-2 hover:bg-destructive/10 hover:text-destructive"
+          onClick={handleLogout}
+        >
           Sign out
         </Button>
       </SidebarFooter>

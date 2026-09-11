@@ -147,7 +147,7 @@ export function WholesaleRulesPanel(props: Owner) {
       </div>
 
       <Button
-        variant="secondary"
+        variant="default"
         size="sm"
         className="w-full"
         disabled={create.isPending || !value}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -44,7 +45,13 @@ export function CreditApplicationDetailView({ applicationId }: Props) {
       setRejecting(false);
       setReason('');
     },
-    onError: () => toast.error('Review failed'),
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError && typeof err.response?.data?.message === 'string'
+          ? err.response.data.message
+          : 'Review failed';
+      toast.error(message);
+    },
   });
 
   if (isLoading || !app) {

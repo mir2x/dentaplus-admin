@@ -28,6 +28,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { formatCents } from '@/lib/format';
+import { storefrontProductUrl } from '@/lib/storefront';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 
 const TYPE_OPTIONS = [
@@ -74,6 +75,8 @@ export function ProductsView() {
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
   const [stock, setStock] = useState(() => searchParams.get('stock') ?? 'all');
+  const [categoryId, setCategoryId] = useState(() => searchParams.get('categoryId') ?? '');
+  const [categoryName, setCategoryName] = useState(() => searchParams.get('categoryName') ?? '');
   const [page, setPage] = useState(() => Number(searchParams.get('page')) || 1);
   const [sku, setSku] = useState('');
   const [skuLoading, setSkuLoading] = useState(false);
@@ -84,10 +87,12 @@ export function ProductsView() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (stock !== 'all') params.set('stock', stock);
+    if (categoryId) params.set('categoryId', categoryId);
+    if (categoryName) params.set('categoryName', categoryName);
     if (page !== 1) params.set('page', String(page));
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [stock, page, pathname, router]);
+  }, [stock, categoryId, categoryName, page, pathname, router]);
 
   function handleFilterChange(fn: () => void) {
     fn();
@@ -110,15 +115,22 @@ export function ProductsView() {
   }
 
   const { data: result, isLoading } = useQuery<PaginatedResponse<Product>>({
-    queryKey: ['products', type, search, stock, page],
+    queryKey: ['products', type, search, stock, categoryId, page],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
       if (type !== 'all') params.type = type;
       if (search) params.q = search;
       if (stock !== 'all') params.stock = stock;
+      if (categoryId) params.categoryId = categoryId;
       return (await api.get('/admin/products', { params })).data;
     },
   });
+
+  function clearCategoryFilter() {
+    setCategoryId('');
+    setCategoryName('');
+    setPage(1);
+  }
 
   const togglePublish = useMutation({
     mutationFn: ({ id, published }: { id: string; published: boolean }) =>
@@ -139,6 +151,19 @@ export function ProductsView() {
           onChange={(e) => handleFilterChange(() => setSearch(e.target.value))}
           className="w-full sm:max-w-xs"
         />
+        {categoryId && (
+          <Badge variant="outline" className="gap-1 py-1.5 pl-2.5 pr-1.5 text-xs">
+            Category: {categoryName || categoryId}
+            <button
+              type="button"
+              onClick={clearCategoryFilter}
+              className="ml-0.5 rounded-sm hover:bg-muted"
+              aria-label="Clear category filter"
+            >
+              ×
+            </button>
+          </Badge>
+        )}
         <Select value={type} onValueChange={(v) => handleFilterChange(() => setType(v ?? 'all'))}>
           <SelectTrigger className="w-52">
             <SelectValue />
@@ -194,13 +219,14 @@ export function ProductsView() {
               <TableHead>Stock</TableHead>
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-center">Published</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading
               ? Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -308,6 +334,20 @@ export function ProductsView() {
                             togglePublish.mutate({ id: product.id, published: checked })
                           }
                         />
+                      </TableCell>
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          render={
+                            <a href={storefrontProductUrl(product.slug)} target="_blank" rel="noreferrer" />
+                          }
+                        >
+                          View
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );

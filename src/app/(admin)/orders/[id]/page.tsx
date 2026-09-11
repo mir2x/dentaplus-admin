@@ -192,6 +192,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </span>
             <OrderStatusBadge status={order.fulfillmentStatus} />
             <OrderPaymentStatusBadge status={order.paymentStatus} />
+            {order.backOrders?.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => router.push(`/back-orders/${b.id}`)}
+                className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100"
+              >
+                Backorder {b.backOrderNo}
+              </button>
+            ))}
           </div>
           {order.orderDate && (
             <p className="text-sm text-muted-foreground">

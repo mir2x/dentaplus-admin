@@ -22,6 +22,7 @@ interface CategoryLike {
   name: string;
   slug: string;
   parentId: string | null;
+  parentName?: string | null;
 }
 
 const NO_PARENT = '__none__';
@@ -68,6 +69,23 @@ function CategoryForm({
   );
 
   const parentOptions = topLevel.filter((c) => c.id !== (isEdit ? editing.id : null));
+  // The category's existing parent can be a non-top-level category from data
+  // that predates the 2-level UI (e.g. a legacy import) — without this, the
+  // dropdown has no matching option to read a label from and falls back to
+  // rendering the raw category id.
+  const currentParentMissing =
+    isEdit &&
+    editing.parentId &&
+    !parentOptions.some((c) => c.id === editing.parentId);
+  if (currentParentMissing) {
+    parentOptions.push({
+      id: editing.parentId!,
+      name: editing.parentName || editing.parentId!,
+      slug: '',
+      parentId: null,
+      children: [],
+    });
+  }
 
   const save = useMutation({
     mutationFn: () => {

@@ -35,6 +35,7 @@ export interface Order {
   quickbooksSyncPending?: boolean;
   invoices?: OrderInvoiceRef[];
   refunds?: Refund[];
+  backOrders?: { id: string; backOrderNo: string }[];
 }
 
 export interface RefundAttachment {

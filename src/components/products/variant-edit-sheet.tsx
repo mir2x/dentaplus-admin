@@ -121,6 +121,7 @@ function VariantForm({
   const [newAttrOpen, setNewAttrOpen] = useState(false);
   const [newAttrName, setNewAttrName] = useState('');
   const [newAttrValues, setNewAttrValues] = useState('');
+  const [newValueDraft, setNewValueDraft] = useState<Record<number, string>>({});
 
   const createAttr = useMutation({
     mutationFn: () =>
@@ -134,6 +135,34 @@ function VariantForm({
     },
     onError: () => toast.error('Could not create attribute (name may already exist)'),
   });
+
+  // Adds/removes a value on an *existing* attribute (e.g. adding "2 LTR" to
+  // "Size" once "0.7 LTR" already exists) — previously the only way to touch
+  // an attribute's value list was to create a brand-new attribute, which
+  // failed outright once the name (e.g. "Size") already existed.
+  const editAttrValues = useMutation({
+    mutationFn: ({ attrId, values }: { attrId: string; values: string[] }) =>
+      api.patch(`/admin/attributes/${attrId}`, { values }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['attributes'] }),
+    onError: () => toast.error('Could not update attribute values'),
+  });
+
+  function addValue(i: number, attrName: string) {
+    const attr = attributes?.find((a) => a.name === attrName);
+    const value = (newValueDraft[i] ?? '').trim();
+    if (!attr || !value || attr.values.includes(value)) return;
+    editAttrValues.mutate(
+      { attrId: attr.id, values: [...attr.values, value] },
+      { onSuccess: () => setOption(i, { value }) },
+    );
+    setNewValueDraft((cur) => ({ ...cur, [i]: '' }));
+  }
+
+  function removeValue(attrName: string, value: string) {
+    const attr = attributes?.find((a) => a.name === attrName);
+    if (!attr) return;
+    editAttrValues.mutate({ attrId: attr.id, values: attr.values.filter((v) => v !== value) });
+  }
 
   async function handleFile(file: File) {
     setUploading(true);
@@ -229,9 +258,15 @@ function VariantForm({
               <Input type="number" value={lowStockAmount} onChange={(e) => setLowStockAmount(e.target.value)} />
             </Field>
           )}
-          <div className="flex items-center justify-between">
-            <Label className="font-normal">Sold individually</Label>
-            <Switch checked={soldIndividually} onCheckedChange={setSoldIndividually} />
+          <div>
+            <div className="flex items-center justify-between">
+              <Label className="font-normal">Sold individually</Label>
+              <Switch checked={soldIndividually} onCheckedChange={setSoldIndividually} />
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Limits a customer to one of this variant per order — for one-off or restricted-quantity
+              items (e.g. controlled items).
+            </p>
           </div>
         </div>
 
@@ -301,26 +336,76 @@ function VariantForm({
         <div className="space-y-2">
           <Label>Attributes</Label>
           {options.map((o, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Select value={o.attributeName} onValueChange={(v) => setOption(i, { attributeName: v ?? '', value: '' })}>
-                <SelectTrigger className="flex-1"><SelectValue placeholder="Attribute" /></SelectTrigger>
-                <SelectContent>
-                  {attributes?.map((a) => (
-                    <SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={o.value} onValueChange={(v) => setOption(i, { value: v ?? '' })}>
-                <SelectTrigger className="flex-1"><SelectValue placeholder="Value" /></SelectTrigger>
-                <SelectContent>
-                  {valuesFor(o.attributeName).map((val) => (
-                    <SelectItem key={val} value={val}>{val}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <button type="button" onClick={() => setOptions((cur) => cur.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive">
-                <Trash2 className="size-4" />
-              </button>
+            <div key={i} className="space-y-1.5 rounded-md border p-2">
+              <div className="flex items-center gap-2">
+                <Select value={o.attributeName} onValueChange={(v) => setOption(i, { attributeName: v ?? '', value: '' })}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Attribute" /></SelectTrigger>
+                  <SelectContent>
+                    {attributes?.map((a) => (
+                      <SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={o.value} onValueChange={(v) => setOption(i, { value: v ?? '' })}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Value" /></SelectTrigger>
+                  <SelectContent>
+                    {valuesFor(o.attributeName).map((val) => (
+                      <SelectItem key={val} value={val}>{val}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <button type="button" onClick={() => setOptions((cur) => cur.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive" aria-label="Remove this attribute from the variant">
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+
+              {o.attributeName && (
+                <div className="space-y-1.5 pl-0.5">
+                  {valuesFor(o.attributeName).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {valuesFor(o.attributeName).map((val) => (
+                        <span
+                          key={val}
+                          className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
+                        >
+                          {val}
+                          <button
+                            type="button"
+                            onClick={() => removeValue(o.attributeName, val)}
+                            aria-label={`Delete value "${val}" from ${o.attributeName}`}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder={`New ${o.attributeName} value, e.g. 2 LTR`}
+                      value={newValueDraft[i] ?? ''}
+                      onChange={(e) => setNewValueDraft((cur) => ({ ...cur, [i]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addValue(i, o.attributeName);
+                        }
+                      }}
+                      className="h-8 text-xs"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!newValueDraft[i]?.trim() || editAttrValues.isPending}
+                      onClick={() => addValue(i, o.attributeName)}
+                    >
+                      <Plus className="size-3.5" /> Add value
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
 

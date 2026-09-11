@@ -31,7 +31,8 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
   const [featuredImageUrl, setFeaturedImageUrl] = useState(
     isEdit ? (post.featuredImageUrl ?? '') : '',
   );
-  const [tagsInput, setTagsInput] = useState(isEdit ? (post.tags ?? []).join(', ') : '');
+  const [tags, setTags] = useState<string[]>(isEdit ? (post.tags ?? []) : []);
+  const [tagDraft, setTagDraft] = useState('');
   const [categoryIds, setCategoryIds] = useState<string[]>(
     isEdit ? (post.categories ?? []).map((c) => c.id) : [],
   );
@@ -44,12 +45,15 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
     queryFn: async () => (await api.get('/admin/blog/categories')).data,
   });
 
+  function addTag(raw: string) {
+    const value = raw.trim();
+    if (!value || tags.includes(value)) return;
+    setTags((cur) => [...cur, value]);
+    setTagDraft('');
+  }
+
   const save = useMutation({
     mutationFn: () => {
-      const tags = tagsInput
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean);
       const payload = {
         title,
         slug: slug || slugify(title),
@@ -164,13 +168,40 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
         </Field>
 
         <Field label="Tags">
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => setTags((cur) => cur.filter((t) => t !== tag))}
+                    aria-label={`Remove tag "${tag}"`}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
           <Input
-            value={tagsInput}
-            onChange={(e) => setTagsInput(e.target.value)}
-            placeholder="e.g. oral health, tips, whitening"
+            value={tagDraft}
+            onChange={(e) => setTagDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                addTag(tagDraft);
+              }
+            }}
+            onBlur={() => addTag(tagDraft)}
+            placeholder="Type a tag and press Enter"
           />
           <p className="text-xs text-muted-foreground">
-            Comma-separated. Each value becomes its own tag.
+            Press Enter (or comma) after each tag to add it.
           </p>
         </Field>
 
@@ -272,8 +303,12 @@ function ImageUploadField({
 
       onChange(res.data.url);
       toast.success('Image uploaded successfully');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to upload image');
+    } catch (err) {
+      const message =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      toast.error(message || 'Failed to upload image');
     } finally {
       setUploading(false);
       if (fileInputRef.current) {

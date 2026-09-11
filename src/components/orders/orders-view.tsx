@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 import { OrderPaymentStatusBadge, OrderStatusBadge } from './order-status-badge';
+import { Badge } from '@/components/ui/badge';
 import { formatCents, formatDate } from '@/lib/format';
 
 const FULFILLMENT_OPTIONS: { value: string; label: string }[] = [
@@ -149,7 +150,16 @@ export function OrdersView() {
                     className="cursor-pointer"
                     onClick={() => router.push(`/orders/${order.id}`)}
                   >
-                    <TableCell className="font-medium">#{order.orderNo}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-1.5">
+                        #{order.orderNo}
+                        {!!order.backOrders?.length && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">
+                            Backorder {order.backOrders.map((b) => b.backOrderNo).join(', ')}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {order.customer?.displayName ?? order.customerEmail ?? '—'}
                     </TableCell>

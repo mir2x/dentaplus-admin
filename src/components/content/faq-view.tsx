@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { FaqItem } from '@/types/api';
 import {
@@ -30,10 +30,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function FaqView() {
   const [editing, setEditing] = useState<FaqItem | 'new' | null>(null);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery<FaqItem[]>({
     queryKey: ['faq'],
     queryFn: async () => (await api.get('/admin/faq')).data,
+  });
+
+  const del = useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/faq/${id}`),
+    onSuccess: () => {
+      toast.success('FAQ deleted');
+      queryClient.invalidateQueries({ queryKey: ['faq'] });
+    },
+    onError: () => toast.error('Delete failed'),
   });
 
   return (
@@ -51,13 +61,14 @@ export function FaqView() {
               <TableHead className="w-12">#</TableHead>
               <TableHead>Question</TableHead>
               <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 3 }).map((_, j) => (
+                  {Array.from({ length: 4 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -74,11 +85,24 @@ export function FaqView() {
                       {f.isActive ? 'Active' : 'Hidden'}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      disabled={del.isPending}
+                      onClick={() => {
+                        if (confirm(`Delete "${f.question}"?`)) del.mutate(f.id);
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                   No FAQ items
                 </TableCell>
               </TableRow>

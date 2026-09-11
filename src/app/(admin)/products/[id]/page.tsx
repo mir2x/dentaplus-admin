@@ -36,6 +36,7 @@ import { VariantsManager } from '@/components/products/variants-manager';
 import { ProductOffersSection } from '@/components/products/product-offers-section';
 import { QuickbooksRefreshCard } from '@/components/shared/quickbooks-refresh-card';
 import { QuickbooksRefSelect } from '@/components/products/quickbooks-ref-select';
+import { storefrontProductUrl } from '@/lib/storefront';
 import {
   InventoryStatus,
   InventoryStatusField,
@@ -139,6 +140,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         </div>
         {!editing && (
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              render={
+                <a href={storefrontProductUrl(product.slug)} target="_blank" rel="noreferrer" />
+              }
+            >
+              View on site
+            </Button>
             <Button onClick={() => setEditing(true)}>Edit</Button>
             <DeleteProductButton productId={product.id} />
           </div>
@@ -586,9 +595,15 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
                   <Input type="number" value={lowStockAmount} onChange={(e) => setLowStockAmount(e.target.value)} />
                 </FieldRow>
               )}
-              <div className="flex items-center justify-between">
-                <Label className="font-normal">Sold individually</Label>
-                <Switch checked={soldIndividually} onCheckedChange={setSoldIndividually} />
+              <div>
+                <div className="flex items-center justify-between">
+                  <Label className="font-normal">Sold individually</Label>
+                  <Switch checked={soldIndividually} onCheckedChange={setSoldIndividually} />
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Limits a customer to one of this item per order — for one-off or restricted-quantity
+                  products (e.g. controlled items).
+                </p>
               </div>
             </div>
           </Section>

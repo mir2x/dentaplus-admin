@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { ExternalLink, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Category, CategoryListItem, PaginatedResponse } from '@/types/api';
 import {
@@ -21,6 +22,7 @@ import { CategoryEditSheet } from './category-edit-sheet';
 const LIMIT = 20;
 
 export function CategoriesView() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<CategoryListItem | 'new' | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -82,13 +84,14 @@ export function CategoriesView() {
               <TableHead>Name</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead className="text-center">Products</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 3 }).map((_, j) => (
+                  {Array.from({ length: 4 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -114,11 +117,24 @@ export function CategoriesView() {
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{category.slug}</TableCell>
                   <TableCell className="text-center text-sm">{category.productCount}</TableCell>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        router.push(
+                          `/products?categoryId=${category.id}&categoryName=${encodeURIComponent(category.name)}`,
+                        )
+                      }
+                    >
+                      <ExternalLink className="size-3.5" /> View products
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                   No categories found
                 </TableCell>
               </TableRow>
