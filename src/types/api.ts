@@ -622,6 +622,7 @@ export interface Statement {
   periodTo: string | null;
   openingBalance: number;
   closingBalance: number;
+  currency?: string;
 }
 
 export interface AgingBuckets {

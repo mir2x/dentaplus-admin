@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Search, X } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, getApiErrorMessage } from '@/lib/api';
 import {
   Category,
   Collection,
@@ -30,10 +30,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ProductImagesPanel } from '@/components/products/product-images-panel';
+import {
+  InlineCategoryCreate,
+  InlineTagCreate,
+} from '@/components/products/inline-taxonomy-create';
 import { ProductBannerPanel } from '@/components/products/product-banner-panel';
 import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel';
 import { VariantsManager } from '@/components/products/variants-manager';
 import { ProductOffersSection } from '@/components/products/product-offers-section';
+import { ProductSalesHistory } from '@/components/products/product-sales-history';
 import { QuickbooksRefreshCard } from '@/components/shared/quickbooks-refresh-card';
 import { QuickbooksRefSelect } from '@/components/products/quickbooks-ref-select';
 import { storefrontProductUrl } from '@/lib/storefront';
@@ -262,6 +267,8 @@ function ProductView({ product }: { product: ProductDetail }) {
         <VariantsManager productId={product.id} />
 
         <ProductOffersSection productId={product.id} />
+
+        <ProductSalesHistory productId={product.id} />
       </div>
 
       <div className="space-y-5">
@@ -444,17 +451,17 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
         ...storefront,
         ...identity,
         ...pricing,
+        categoryIds,
+        tagIds,
+        collectionIds,
       });
-      await api.put(`/admin/products/${product.id}/categories`, { categoryIds });
-      await api.put(`/admin/products/${product.id}/tags`, { tagIds });
-      await api.put(`/admin/products/${product.id}/collections`, { collectionIds });
     },
     onSuccess: () => {
       toast.success('Product saved');
       queryClient.invalidateQueries({ queryKey: ['products'] });
       onDone();
     },
-    onError: () => toast.error('Failed to save product'),
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Failed to save product')),
   });
 
   const categoryNameById = new Map<string, string>();
@@ -837,6 +844,14 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           ) : (
             <p className="text-xs text-muted-foreground">No categories defined.</p>
           )}
+          <div className="mt-2">
+            <InlineCategoryCreate
+              categories={allCategories ?? []}
+              onCreated={(category) =>
+                setCategoryIds((current) => [...new Set([...current, category.id])])
+              }
+            />
+          </div>
           <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
         </Section>
 
@@ -887,6 +902,11 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
           ) : (
             <p className="text-xs text-muted-foreground">No tags defined.</p>
           )}
+          <div className="mt-2">
+            <InlineTagCreate
+              onCreated={(tag) => setTagIds((current) => [...new Set([...current, tag.id])])}
+            />
+          </div>
           <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
         </Section>
 
@@ -967,7 +987,12 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
 
         {!product.hasVariant && (
           <Section title="Wholesale pricing">
-            <WholesaleRulesPanel productId={product.id} />
+            <WholesaleRulesPanel
+              productId={product.id}
+              regularPriceCents={
+                regularPrice.trim() ? Math.round(Number(regularPrice) * 100) : null
+              }
+            />
           </Section>
         )}
       </div>

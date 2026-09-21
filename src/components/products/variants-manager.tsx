@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { ProductVariantDetail } from '@/types/api';
+import { Offer, ProductVariantDetail } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatCents } from '@/lib/format';
@@ -20,6 +20,10 @@ export function VariantsManager({ productId }: { productId: string }) {
   const { data: variants } = useQuery<ProductVariantDetail[]>({
     queryKey: ['variants', productId],
     queryFn: async () => (await api.get(`/admin/products/${productId}/variants`)).data,
+  });
+  const { data: offers } = useQuery<Offer[]>({
+    queryKey: ['offers'],
+    queryFn: async () => (await api.get('/admin/offers')).data,
   });
 
   const del = useMutation({
@@ -67,6 +71,17 @@ export function VariantsManager({ productId }: { productId: string }) {
                   <div className="text-xs text-muted-foreground truncate">
                     {v.sku ?? 'no SKU'}
                     {v.options.length > 0 && ` · ${v.options.map((o) => `${o.attributeName}: ${o.value}`).join(', ')}`}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {offers
+                      ?.filter((offer) =>
+                        offer.triggerVariants.some((variant) => variant.id === v.id),
+                      )
+                      .map((offer) => (
+                        <Badge key={offer.id} variant="outline" className="text-[10px]">
+                          Offer: {offer.name}
+                        </Badge>
+                      ))}
                   </div>
                 </div>
               </div>

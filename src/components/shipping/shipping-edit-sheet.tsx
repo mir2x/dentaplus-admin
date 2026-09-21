@@ -15,6 +15,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const AUSTRALIAN_STATES = [
+  { value: 'NSW', label: 'New South Wales (NSW)' },
+  { value: 'VIC', label: 'Victoria (VIC)' },
+  { value: 'QLD', label: 'Queensland (QLD)' },
+  { value: 'WA', label: 'Western Australia (WA)' },
+  { value: 'SA', label: 'South Australia (SA)' },
+  { value: 'TAS', label: 'Tasmania (TAS)' },
+  { value: 'ACT', label: 'Australian Capital Territory (ACT)' },
+  { value: 'NT', label: 'Northern Territory (NT)' },
+];
 
 interface Props {
   editing: ShippingMethod | 'new' | null;
@@ -117,13 +135,23 @@ function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; o
               wins over one matching state alone.
             </p>
           )}
-          <Field label={isDefault ? 'State' : 'State (required, e.g. NSW)'}>
-            <Input
-              value={isDefault ? '' : state}
-              placeholder={isDefault ? 'All of Australia' : 'e.g. NSW'}
-              disabled={isDefault}
-              onChange={(e) => setState(e.target.value)}
-            />
+          <Field label={isDefault ? 'State' : 'State (required)'}>
+            {isDefault ? (
+              <Input value="" placeholder="All of Australia" disabled />
+            ) : (
+              <Select value={state} onValueChange={(value) => setState(value ?? '')}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AUSTRALIAN_STATES.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </Field>
           <Field label="Postcodes (optional)">
             <Input
@@ -133,6 +161,12 @@ function ShippingForm({ editing, onClose }: { editing: ShippingMethod | 'new'; o
               onChange={(e) => setPostcodes(e.target.value)}
             />
           </Field>
+          {!isDefault && (
+            <p className="text-xs text-muted-foreground">
+              Leave postcodes empty to cover the entire state. Adding postcodes limits this
+              method to only those postcode ranges.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

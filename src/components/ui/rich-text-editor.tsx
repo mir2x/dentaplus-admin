@@ -141,8 +141,12 @@ export function RichTextEditor({
         </div>
       )}
 
-      <div className="px-2.5 py-2" style={{ minHeight }}>
-        <EditorContent editor={editor} />
+      <div
+        className="cursor-text px-2.5 py-2"
+        style={{ minHeight }}
+        onClick={() => editor.chain().focus().run()}
+      >
+        <EditorContent editor={editor} className="min-h-full" />
       </div>
     </div>
   );

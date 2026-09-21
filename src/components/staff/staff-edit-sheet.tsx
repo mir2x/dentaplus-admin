@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -48,7 +48,14 @@ function StaffForm({ editing, onClose }: { editing: StaffMember | 'new'; onClose
   const [allowedPages, setAllowedPages] = useState<string[]>(isEdit ? editing.allowedPages : []);
 
   const togglePage = (href: string, checked: boolean) =>
-    setAllowedPages((cur) => (checked ? [...cur, href] : cur.filter((p) => p !== href)));
+    setAllowedPages((cur) =>
+      checked ? [...new Set([...cur, href])] : cur.filter((p) => p !== href),
+    );
+
+  const toggleGroup = (hrefs: string[], checked: boolean) =>
+    setAllowedPages((cur) =>
+      checked ? [...new Set([...cur, ...hrefs])] : cur.filter((page) => !hrefs.includes(page)),
+    );
 
   const save = useMutation({
     mutationFn: () => {
@@ -139,9 +146,12 @@ function StaffForm({ editing, onClose }: { editing: StaffMember | 'new'; onClose
               </p>
               {ADMIN_PAGE_GROUPS.map((group) => (
                 <div key={group.label ?? 'general'} className="space-y-1.5">
-                  {group.label && (
-                    <p className="text-xs font-medium uppercase text-muted-foreground">{group.label}</p>
-                  )}
+                  <PermissionGroupToggle
+                    label={group.label ?? 'General'}
+                    hrefs={group.items.map((item) => item.href)}
+                    allowedPages={allowedPages}
+                    onToggle={toggleGroup}
+                  />
                   {group.items.map((item) => (
                     <div key={item.href} className="flex items-center justify-between">
                       <Label className="font-normal">{item.label}</Label>
@@ -162,6 +172,41 @@ function StaffForm({ editing, onClose }: { editing: StaffMember | 'new'; onClose
         </Button>
       </div>
     </>
+  );
+}
+
+function PermissionGroupToggle({
+  label,
+  hrefs,
+  allowedPages,
+  onToggle,
+}: {
+  label: string;
+  hrefs: string[];
+  allowedPages: string[];
+  onToggle: (hrefs: string[], checked: boolean) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const selectedCount = hrefs.filter((href) => allowedPages.includes(href)).length;
+  const allSelected = selectedCount === hrefs.length;
+  const partiallySelected = selectedCount > 0 && !allSelected;
+
+  useEffect(() => {
+    if (inputRef.current) inputRef.current.indeterminate = partiallySelected;
+  }, [partiallySelected]);
+
+  return (
+    <label className="flex cursor-pointer items-center justify-between border-b pb-1.5 text-xs font-medium uppercase text-muted-foreground">
+      {label}
+      <input
+        ref={inputRef}
+        type="checkbox"
+        checked={allSelected}
+        onChange={(event) => onToggle(hrefs, event.target.checked)}
+        className="size-4 accent-primary"
+        aria-label={`Select all ${label} permissions`}
+      />
+    </label>
   );
 }
 

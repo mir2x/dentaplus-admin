@@ -71,6 +71,14 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>
+            <Button
+              type="button"
+              variant="link"
+              className="w-full"
+              onClick={() => router.push('/forgot-password')}
+            >
+              Forgot password?
+            </Button>
           </form>
         </CardContent>
       </Card>

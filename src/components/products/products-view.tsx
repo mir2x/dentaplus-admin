@@ -46,6 +46,12 @@ const STOCK_OPTIONS = [
   { value: 'backorder', label: 'On backorder' },
 ];
 
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+];
+
 const TYPE_LABELS: Record<ProductType, string> = {
   GENERAL: 'General',
   MEDICINE: 'Medicine',
@@ -75,6 +81,7 @@ export function ProductsView() {
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
   const [stock, setStock] = useState(() => searchParams.get('stock') ?? 'all');
+  const [status, setStatus] = useState(() => searchParams.get('status') ?? 'all');
   const [categoryId, setCategoryId] = useState(() => searchParams.get('categoryId') ?? '');
   const [categoryName, setCategoryName] = useState(() => searchParams.get('categoryName') ?? '');
   const [page, setPage] = useState(() => Number(searchParams.get('page')) || 1);
@@ -87,12 +94,13 @@ export function ProductsView() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (stock !== 'all') params.set('stock', stock);
+    if (status !== 'all') params.set('status', status);
     if (categoryId) params.set('categoryId', categoryId);
     if (categoryName) params.set('categoryName', categoryName);
     if (page !== 1) params.set('page', String(page));
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [stock, categoryId, categoryName, page, pathname, router]);
+  }, [stock, status, categoryId, categoryName, page, pathname, router]);
 
   function handleFilterChange(fn: () => void) {
     fn();
@@ -115,12 +123,13 @@ export function ProductsView() {
   }
 
   const { data: result, isLoading } = useQuery<PaginatedResponse<Product>>({
-    queryKey: ['products', type, search, stock, categoryId, page],
+    queryKey: ['products', type, search, stock, status, categoryId, page],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
       if (type !== 'all') params.type = type;
       if (search) params.q = search;
       if (stock !== 'all') params.stock = stock;
+      if (status !== 'all') params.published = status === 'active' ? 'true' : 'false';
       if (categoryId) params.categoryId = categoryId;
       return (await api.get('/admin/products', { params })).data;
     },
@@ -183,6 +192,19 @@ export function ProductsView() {
           </SelectTrigger>
           <SelectContent>
             {STOCK_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={status} onValueChange={(v) => handleFilterChange(() => setStatus(v ?? 'all'))}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((o) => (
               <SelectItem key={o.value} value={o.value}>
                 {o.label}
               </SelectItem>

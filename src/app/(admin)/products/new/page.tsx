@@ -5,8 +5,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Upload, X } from 'lucide-react';
-import { api } from '@/lib/api';
-import { Category, Collection, ProductType } from '@/types/api';
+import { api, getApiErrorMessage } from '@/lib/api';
+import { Category, Collection, ProductType, Tag } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { QuickbooksRefSelect } from '@/components/products/quickbooks-ref-select';
+import {
+  InlineCategoryCreate,
+  InlineTagCreate,
+} from '@/components/products/inline-taxonomy-create';
 
 const TYPE_OPTIONS: { value: ProductType; label: string }[] = [
   { value: 'GENERAL', label: 'General' },
@@ -97,6 +101,7 @@ export default function NewProductPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [tagIds, setTagIds] = useState<string[]>([]);
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
 
   const { data: categories } = useQuery<Category[]>({
@@ -106,6 +111,10 @@ export default function NewProductPage() {
   const { data: collections } = useQuery<Collection[]>({
     queryKey: ['collections'],
     queryFn: async () => (await api.get('/admin/collections')).data,
+  });
+  const { data: tags } = useQuery<Tag[]>({
+    queryKey: ['tags'],
+    queryFn: async () => (await api.get('/admin/tags')).data,
   });
 
   async function handleFile(file: File) {
@@ -155,15 +164,12 @@ export default function NewProductPage() {
         position: position ? parseInt(position, 10) : undefined,
         published,
         featured,
+        categoryIds,
+        tagIds,
+        collectionIds,
       });
       for (let i = 0; i < images.length; i++) {
         await api.post(`/admin/products/${data.id}/images`, { url: images[i], position: i });
-      }
-      if (categoryIds.length > 0) {
-        await api.put(`/admin/products/${data.id}/categories`, { categoryIds });
-      }
-      if (collectionIds.length > 0) {
-        await api.put(`/admin/products/${data.id}/collections`, { collectionIds });
       }
       return data;
     },
@@ -171,7 +177,7 @@ export default function NewProductPage() {
       toast.success('Product created');
       router.push(`/products/${data.id}`);
     },
-    onError: () => toast.error('Could not create product (SKU is required for a no-variant product)'),
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not create product')),
   });
 
   const canSave = name.trim() && (hasVariant || sku.trim());
@@ -269,6 +275,42 @@ export default function NewProductPage() {
           ) : (
             <p className="text-xs text-muted-foreground">No categories found.</p>
           )}
+          <InlineCategoryCreate
+            categories={categories ?? []}
+            onCreated={(category) =>
+              setCategoryIds((current) => [...new Set([...current, category.id])])
+            }
+          />
+        </div>
+
+        {/* ── Tags ── */}
+        <div className="space-y-1.5">
+          <Label>Tags</Label>
+          {tags?.length ? (
+            <div className="flex flex-wrap gap-2 rounded-md border p-3">
+              {tags.map((tag) => (
+                <label key={tag.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={tagIds.includes(tag.id)}
+                    onChange={() =>
+                      setTagIds((current) =>
+                        current.includes(tag.id)
+                          ? current.filter((id) => id !== tag.id)
+                          : [...current, tag.id],
+                      )
+                    }
+                  />
+                  {tag.name}
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No tags found.</p>
+          )}
+          <InlineTagCreate
+            onCreated={(tag) => setTagIds((current) => [...new Set([...current, tag.id])])}
+          />
         </div>
 
         {/* ── Collections ── */}

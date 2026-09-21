@@ -137,7 +137,7 @@ export default function VariantDetailPage({
 
       <section className="rounded-lg border p-4">
         <p className="text-sm font-medium mb-3">Wholesale pricing</p>
-        <WholesaleRulesPanel variantId={variantId} />
+        <WholesaleRulesPanel variantId={variantId} regularPriceCents={v.regularCents} />
       </section>
 
       <VariantOffersSection variantId={variantId} variants={variants ?? []} />

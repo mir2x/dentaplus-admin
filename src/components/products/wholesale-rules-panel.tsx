@@ -2,29 +2,27 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { Trash2 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { WholesaleDiscountType, WholesaleRule } from '@/types/api';
+import { api, getApiErrorMessage } from '@/lib/api';
+import { WholesaleRule } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
-function describeRule(r: WholesaleRule): string {
-  if (r.discountType === 'PERCENTAGE') return `${(r.percentageBps ?? 0) / 100}% off`;
-  return `$${((r.amountCents ?? 0) / 100).toFixed(2)} off / unit`;
+type Owner =
+  | { productId: string; variantId?: undefined }
+  | { productId?: undefined; variantId: string };
+
+function discountCents(rule: WholesaleRule, regularPriceCents: number): number {
+  return rule.discountType === 'PERCENTAGE'
+    ? Math.round(regularPriceCents * ((rule.percentageBps ?? 0) / 10000))
+    : (rule.amountCents ?? 0);
 }
 
-type Owner = { productId: string; variantId?: undefined } | { productId?: undefined; variantId: string };
-
-export function WholesaleRulesPanel(props: Owner) {
+export function WholesaleRulesPanel(
+  props: Owner & { regularPriceCents: number | null },
+) {
   const queryClient = useQueryClient();
   const ownerKey = props.productId ? `product:${props.productId}` : `variant:${props.variantId}`;
   const basePath = props.productId
@@ -35,34 +33,49 @@ export function WholesaleRulesPanel(props: Owner) {
     queryKey: ['wholesale-rules', ownerKey],
     queryFn: async () => (await api.get(basePath)).data,
   });
-  // Wholesale pricing only ever applies to the wholesale_customer role —
-  // loyal_customer just gates catalog/search visibility and has no price rule.
-  const roleKey = 'wholesale_customer';
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [minQuantity, setMinQuantity] = useState('1');
-  const [discountType, setDiscountType] = useState<WholesaleDiscountType>('PERCENTAGE');
-  const [value, setValue] = useState('');
+  const [wholesalePrice, setWholesalePrice] = useState('');
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ['wholesale-rules', ownerKey] });
 
-  const create = useMutation({
+  const resetForm = () => {
+    setEditingId(null);
+    setMinQuantity('1');
+    setWholesalePrice('');
+  };
+
+  const editRule = (rule: WholesaleRule) => {
+    const regular = props.regularPriceCents;
+    if (regular == null) return;
+    setEditingId(rule.id);
+    setMinQuantity(String(rule.minQuantity));
+    setWholesalePrice(((regular - discountCents(rule, regular)) / 100).toFixed(2));
+  };
+
+  const save = useMutation({
     mutationFn: () => {
+      const regular = props.regularPriceCents ?? 0;
+      const price = Math.round(parseFloat(wholesalePrice) * 100);
       const payload = {
-        roleKey,
+        roleKey: 'wholesale_customer',
         minQuantity: Number(minQuantity) || 1,
-        discountType,
-        ...(discountType === 'PERCENTAGE'
-          ? { percentageBps: Math.round(parseFloat(value || '0') * 100) }
-          : { amountCents: Math.round(parseFloat(value || '0') * 100) }),
+        discountType: 'FIXED',
+        amountCents: regular - price,
+        percentageBps: null,
       };
-      return api.post(basePath, payload);
+      return editingId
+        ? api.patch(`/admin/wholesale-rules/${editingId}`, payload)
+        : api.post(basePath, payload);
     },
     onSuccess: () => {
-      toast.success('Wholesale rule added');
-      setValue('');
+      toast.success(editingId ? 'Wholesale rule updated' : 'Wholesale rule added');
+      resetForm();
       invalidate();
     },
-    onError: () => toast.error('Could not add rule (check for a duplicate role + quantity)'),
+    onError: (error) =>
+      toast.error(getApiErrorMessage(error, 'Could not save wholesale rule')),
   });
 
   const del = useMutation({
@@ -74,28 +87,54 @@ export function WholesaleRulesPanel(props: Owner) {
     onError: () => toast.error('Delete failed'),
   });
 
+  const enteredPriceCents = Math.round(parseFloat(wholesalePrice || '0') * 100);
+  const canSave =
+    props.regularPriceCents != null &&
+    enteredPriceCents > 0 &&
+    enteredPriceCents < props.regularPriceCents;
+
   return (
     <div className="space-y-3">
       {rules?.length ? (
         <ul className="divide-y rounded-md border text-sm">
-          {rules.map((r) => (
-            <li key={r.id} className="flex items-center justify-between px-3 py-2">
-              <span>
-                <span className="font-medium">{r.roleKey}</span>
-                <span className="text-muted-foreground"> · {r.minQuantity}+ units · </span>
-                {describeRule(r)}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive"
-                disabled={del.isPending}
-                onClick={() => del.mutate(r.id)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </li>
-          ))}
+          {rules.map((rule) => {
+            const discount =
+              props.regularPriceCents == null
+                ? null
+                : discountCents(rule, props.regularPriceCents);
+            const price =
+              discount == null || props.regularPriceCents == null
+                ? null
+                : props.regularPriceCents - discount;
+            return (
+              <li key={rule.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                <span>
+                  <span className="font-medium">Wholesale customer</span>
+                  <span className="text-muted-foreground"> · {rule.minQuantity}+ units · </span>
+                  {price == null ? 'Price unavailable' : `$${(price / 100).toFixed(2)}`}
+                  {discount != null && (
+                    <span className="text-muted-foreground">
+                      {' '}(${(discount / 100).toFixed(2)} off)
+                    </span>
+                  )}
+                </span>
+                <div className="flex shrink-0">
+                  <Button variant="ghost" size="sm" onClick={() => editRule(rule)}>
+                    <Pencil className="size-4" /> Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive"
+                    disabled={del.isPending}
+                    onClick={() => del.mutate(rule.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p className="text-xs text-muted-foreground">
@@ -103,58 +142,62 @@ export function WholesaleRulesPanel(props: Owner) {
         </p>
       )}
 
+      <div className="rounded-md bg-muted/30 p-3 text-sm">
+        Regular price:{' '}
+        <strong>
+          {props.regularPriceCents == null
+            ? 'Set a regular price first'
+            : `$${(props.regularPriceCents / 100).toFixed(2)}`}
+        </strong>
+      </div>
+
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label className="text-xs">Role</Label>
-          <p className="flex h-9 items-center text-sm">Wholesale customer</p>
-        </div>
         <div className="space-y-1">
           <Label className="text-xs">Min quantity</Label>
           <Input
             type="number"
             min={1}
             value={minQuantity}
-            onChange={(e) => setMinQuantity(e.target.value)}
+            onChange={(event) => setMinQuantity(event.target.value)}
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Discount type</Label>
-          <Select
-            value={discountType}
-            onValueChange={(v) => setDiscountType((v ?? 'PERCENTAGE') as WholesaleDiscountType)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="PERCENTAGE">Percentage</SelectItem>
-              <SelectItem value="FIXED">Fixed ($/unit)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">
-            {discountType === 'PERCENTAGE' ? 'Percent off' : 'Dollars off / unit'}
-          </Label>
+          <Label className="text-xs">Wholesale price ($)</Label>
           <Input
             type="number"
             step="0.01"
-            placeholder={discountType === 'PERCENTAGE' ? '20' : '5.00'}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
+            min="0.01"
+            max={props.regularPriceCents != null ? (props.regularPriceCents - 1) / 100 : undefined}
+            placeholder="e.g. 11.00"
+            value={wholesalePrice}
+            onChange={(event) => setWholesalePrice(event.target.value)}
           />
+          {props.regularPriceCents != null && enteredPriceCents > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Discount: $
+              {Math.max(0, (props.regularPriceCents - enteredPriceCents) / 100).toFixed(2)} per unit
+            </p>
+          )}
         </div>
       </div>
 
       <Button
-        variant="default"
         size="sm"
         className="w-full"
-        disabled={create.isPending || !value}
-        onClick={() => create.mutate()}
+        disabled={save.isPending || !canSave}
+        onClick={() => save.mutate()}
       >
-        {create.isPending ? 'Adding…' : 'Add wholesale rule'}
+        {save.isPending
+          ? 'Saving…'
+          : editingId
+            ? 'Save wholesale rule'
+            : 'Add wholesale rule'}
       </Button>
+      {editingId && (
+        <Button variant="ghost" size="sm" className="w-full" onClick={resetForm}>
+          <X className="size-4" /> Cancel edit
+        </Button>
+      )}
     </div>
   );
 }

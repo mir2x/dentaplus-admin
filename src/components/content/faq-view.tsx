@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Trash2 } from 'lucide-react';
+import { GripVertical, Plus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { FaqItem } from '@/types/api';
 import {
@@ -30,6 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function FaqView() {
   const [editing, setEditing] = useState<FaqItem | 'new' | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery<FaqItem[]>({
@@ -46,6 +47,34 @@ export function FaqView() {
     onError: () => toast.error('Delete failed'),
   });
 
+  const reorder = useMutation({
+    mutationFn: (items: FaqItem[]) =>
+      api.put('/admin/faq/reorder', { ids: items.map((item) => item.id) }),
+    onMutate: async (items) => {
+      await queryClient.cancelQueries({ queryKey: ['faq'] });
+      const previous = queryClient.getQueryData<FaqItem[]>(['faq']);
+      queryClient.setQueryData(['faq'], items);
+      return { previous };
+    },
+    onError: (_error, _items, context) => {
+      if (context?.previous) queryClient.setQueryData(['faq'], context.previous);
+      toast.error('Could not save FAQ order');
+    },
+    onSuccess: () => toast.success('FAQ order saved'),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['faq'] }),
+  });
+
+  function dropOn(targetId: string) {
+    if (!data || !draggingId || draggingId === targetId) return;
+    const next = [...data];
+    const from = next.findIndex((item) => item.id === draggingId);
+    const to = next.findIndex((item) => item.id === targetId);
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    reorder.mutate(next.map((item, index) => ({ ...item, sortOrder: index })));
+    setDraggingId(null);
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -58,7 +87,7 @@ export function FaqView() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">#</TableHead>
+              <TableHead className="w-12"><span className="sr-only">Reorder</span></TableHead>
               <TableHead>Question</TableHead>
               <TableHead className="text-center">Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -77,8 +106,19 @@ export function FaqView() {
               ))
             ) : data?.length ? (
               data.map((f) => (
-                <TableRow key={f.id} className="cursor-pointer" onClick={() => setEditing(f)}>
-                  <TableCell className="text-muted-foreground">{f.sortOrder}</TableCell>
+                <TableRow
+                  key={f.id}
+                  draggable
+                  className={`cursor-pointer ${draggingId === f.id ? 'opacity-50' : ''}`}
+                  onClick={() => !draggingId && setEditing(f)}
+                  onDragStart={() => setDraggingId(f.id)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => dropOn(f.id)}
+                  onDragEnd={() => setDraggingId(null)}
+                >
+                  <TableCell className="text-muted-foreground">
+                    <GripVertical className="size-4 cursor-grab" aria-label="Drag to reorder" />
+                  </TableCell>
                   <TableCell className="font-medium max-w-xl truncate">{f.question}</TableCell>
                   <TableCell className="text-center">
                     <Badge variant={f.isActive ? 'default' : 'secondary'}>
@@ -131,12 +171,11 @@ function FaqForm({ editing, onClose }: { editing: FaqItem | 'new'; onClose: () =
   const isEdit = editing !== 'new';
   const [question, setQuestion] = useState(isEdit ? editing.question : '');
   const [answer, setAnswer] = useState(isEdit ? editing.answer : '');
-  const [sortOrder, setSortOrder] = useState(isEdit ? editing.sortOrder : 0);
   const [isActive, setIsActive] = useState(isEdit ? editing.isActive : true);
 
   const save = useMutation({
     mutationFn: () => {
-      const payload = { question, answer, sortOrder, isActive };
+      const payload = { question, answer, isActive };
       return isEdit
         ? api.patch(`/admin/faq/${editing.id}`, payload)
         : api.post('/admin/faq', payload);
@@ -172,10 +211,6 @@ function FaqForm({ editing, onClose }: { editing: FaqItem | 'new'; onClose: () =
         <div className="space-y-1.5">
           <Label>Answer</Label>
           <Textarea rows={5} value={answer} onChange={(e) => setAnswer(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Sort order</Label>
-          <Input type="number" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} />
         </div>
         <div className="flex items-center justify-between">
           <Label>Active</Label>
