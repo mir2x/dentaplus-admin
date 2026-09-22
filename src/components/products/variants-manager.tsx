@@ -64,9 +64,6 @@ export function VariantsManager({ productId }: { productId: string }) {
                   <div className="font-medium truncate">
                     {v.name || v.options.map((o) => o.value).join(' / ') || '—'}
                     {!v.isActive && <Badge variant="secondary" className="ml-2 text-[10px]">Inactive</Badge>}
-                    {!v.quickbooksItemId && v.sku && (
-                      <Badge variant="outline" className="ml-2 text-[10px]">Not synced</Badge>
-                    )}
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
                     {v.sku ?? 'no SKU'}
@@ -109,7 +106,7 @@ export function VariantsManager({ productId }: { productId: string }) {
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          No variants yet. Add one — each variant becomes its own QuickBooks item.
+          No variants yet. Add one to get started.
         </p>
       )}
 

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { ProductVariantDetail } from '@/types/api';
-import { formatCents, formatDateTime } from '@/lib/format';
+import { formatCents } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -73,11 +73,6 @@ export default function VariantDetailPage({
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-xl font-semibold">{title}</h2>
             {!v.isActive && <Badge variant="secondary">Inactive</Badge>}
-            {v.quickbooksItemId ? (
-              <Badge variant="outline">QuickBooks-synced</Badge>
-            ) : (
-              <Badge variant="secondary">Not synced</Badge>
-            )}
           </div>
           <p className="text-sm text-muted-foreground">SKU {v.sku ?? '—'}</p>
         </div>
@@ -126,11 +121,6 @@ export default function VariantDetailPage({
             ) : (
               <span className="text-sm text-muted-foreground">None</span>
             )}
-          </div>
-          <div>
-            <p className="text-sm font-medium mb-2">QuickBooks</p>
-            <Row label="Item ID" value={v.quickbooksItemId} />
-            <Row label="Synced" value={v.quickbooksSyncedAt ? formatDateTime(v.quickbooksSyncedAt) : 'Never'} />
           </div>
         </section>
       </div>

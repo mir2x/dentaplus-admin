@@ -11,7 +11,6 @@ import {
   Collection,
   ProductDetail,
   ProductType,
-  QboProductSnapshot,
   Tag,
 } from '@/types/api';
 import { formatCents, formatDate } from '@/lib/format';
@@ -39,8 +38,6 @@ import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel
 import { VariantsManager } from '@/components/products/variants-manager';
 import { ProductOffersSection } from '@/components/products/product-offers-section';
 import { ProductSalesHistory } from '@/components/products/product-sales-history';
-import { QuickbooksRefreshCard } from '@/components/shared/quickbooks-refresh-card';
-import { QuickbooksRefSelect } from '@/components/products/quickbooks-ref-select';
 import { storefrontProductUrl } from '@/lib/storefront';
 import {
   InventoryStatus,
@@ -133,11 +130,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <h2 className="text-xl font-semibold">{product.name}</h2>
             {!product.published && <Badge variant="secondary">Draft</Badge>}
             {product.featured && <Badge>Featured</Badge>}
-            {product.hasVariant ? (
-              <Badge variant="outline">Variant product</Badge>
-            ) : (
-              product.quickbooksItemId && <Badge variant="outline">QuickBooks-synced</Badge>
-            )}
+            {product.hasVariant && <Badge variant="outline">Variant product</Badge>}
           </div>
           <p className="text-sm text-muted-foreground">
             {product.hasVariant ? 'SKUs on variants' : `SKU ${product.sku ?? '—'}`}
@@ -302,35 +295,11 @@ function ProductView({ product }: { product: ProductDetail }) {
           )}
         </Section>
 
-        <QuickbooksRefreshCard<QboProductSnapshot>
-          endpoint={`/admin/products/${product.id}/quickbooks`}
-          queryKey={['product-qbo', product.id]}
-          render={(snap) => <QboItemView snap={snap} />}
-        />
-
         <Section title="Meta">
           <Row label="Created" value={formatDate(product.createdAt)} />
           <Row label="Updated" value={formatDate(product.updatedAt)} />
-          <Row label="QuickBooks item ID" value={product.quickbooksItemId} />
         </Section>
       </div>
-    </div>
-  );
-}
-
-function QboItemView({ snap }: { snap: QboProductSnapshot }) {
-  if (!snap.linked) return <p className="text-sm text-muted-foreground">Not linked to QuickBooks.</p>;
-  if (!snap.connected)
-    return <p className="text-sm text-destructive">Could not reach QuickBooks. {snap.error}</p>;
-  const i = snap.item;
-  return (
-    <div className="space-y-1.5 text-sm">
-      <Row label="Name" value={i.Name} />
-      <Row label="SKU" value={i.Sku} />
-      <Row label="Type" value={i.Type} />
-      <Row label="Unit price" value={i.UnitPrice != null ? `$${i.UnitPrice.toFixed(2)}` : null} />
-      <Row label="Qty on hand" value={i.QtyOnHand?.toString()} />
-      <Row label="Active" value={i.Active == null ? null : i.Active ? 'Yes' : 'No'} />
     </div>
   );
 }
@@ -339,7 +308,6 @@ function QboItemView({ snap }: { snap: QboProductSnapshot }) {
 
 function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: () => void }) {
   const queryClient = useQueryClient();
-  const isQbo = !!product.quickbooksItemId;
   const currency = product.prices[0]?.currency ?? 'AUD';
   const regular = product.prices.find((p) => p.type === 'REGULAR');
   const sale = product.prices.find((p) => p.type === 'SALE');
@@ -375,12 +343,6 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   const [cost, setCost] = useState(
     product.costCents != null ? (product.costCents / 100).toFixed(2) : '',
   );
-  const [incomeAccountId, setIncomeAccountId] = useState(product.quickbooksIncomeAccountId ?? '');
-  const [expenseAccountId, setExpenseAccountId] = useState(
-    product.quickbooksExpenseAccountId ?? '',
-  );
-  const [assetAccountId, setAssetAccountId] = useState(product.quickbooksAssetAccountId ?? '');
-  const [taxCodeId, setTaxCodeId] = useState(product.quickbooksTaxCodeId ?? '');
 
   const [categoryIds, setCategoryIds] = useState<string[]>(
     product.categories.map((c) => c.category.id),
@@ -422,9 +384,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
         taxStatus,
         taxClass: taxClass || undefined,
       };
-      const identity = isQbo
-        ? {}
-        : { name, sku: product.hasVariant ? undefined : sku || undefined };
+      const identity = { name, sku: product.hasVariant ? undefined : sku || undefined };
       const { quantity: stockQuantity, ...inventoryPayload } = resolveInventoryPayload(
         inventoryStatus,
         stock,
@@ -442,10 +402,6 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             // "use default" reaches the backend as '' -> null, not "untouched".
             supplier,
             cost: cost ? parseFloat(cost) : undefined,
-            quickbooksIncomeAccountId: incomeAccountId,
-            quickbooksExpenseAccountId: expenseAccountId,
-            quickbooksAssetAccountId: assetAccountId,
-            quickbooksTaxCodeId: taxCodeId,
           };
       await api.patch(`/admin/products/${product.id}`, {
         ...storefront,
@@ -530,18 +486,9 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-5">
-        {isQbo && (
-          <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-3">
-            Name and SKU are managed in QuickBooks and synced here. Stock is managed here
-            and pushed to QuickBooks. Sale price is synced with QuickBooks&apos; unit price;
-            regular price is local to the storefront and never synced. Edit the storefront
-            fields (type, brand, regular/sale price, descriptions, visibility).
-          </p>
-        )}
-
         <Section title="Identity">
           <FieldRow label="Name">
-            <Input value={name} disabled={isQbo} onChange={(e) => setName(e.target.value)} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
           </FieldRow>
           {product.hasVariant ? (
             <p className="text-xs text-muted-foreground mb-3">
@@ -549,7 +496,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             </p>
           ) : (
             <FieldRow label="SKU">
-              <Input value={sku} disabled={isQbo} onChange={(e) => setSku(e.target.value)} />
+              <Input value={sku} onChange={(e) => setSku(e.target.value)} />
             </FieldRow>
           )}
           <FieldRow label="GTIN / EAN / Barcode">
@@ -617,13 +564,13 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
         )}
 
         {product.hasVariant ? (
-          <Section title="Purchasing & QuickBooks">
+          <Section title="Purchasing">
             <p className="text-xs text-muted-foreground">
-              Managed per-variant — edit cost, supplier, and accounts on each variant below.
+              Managed per-variant — edit cost and supplier on each variant below.
             </p>
           </Section>
         ) : (
-          <Section title="Purchasing & QuickBooks">
+          <Section title="Purchasing">
             <div className="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
               <FieldRow label="Cost ($)">
                 <Input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
@@ -634,35 +581,6 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
                   value={supplier}
                   onChange={(e) => setSupplier(e.target.value)}
                 />
-              </FieldRow>
-            </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              Supplier is matched or created as a Vendor in QuickBooks by this exact name.
-              Clearing an account/tax override here won&apos;t remove it from an
-              already-synced QuickBooks item — change it there instead.
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <FieldRow label="Income account">
-                <QuickbooksRefSelect kind="income" value={incomeAccountId} onChange={setIncomeAccountId} />
-              </FieldRow>
-              <FieldRow label="Expense account">
-                <QuickbooksRefSelect kind="expense" value={expenseAccountId} onChange={setExpenseAccountId} />
-              </FieldRow>
-              <FieldRow label="Inventory asset account">
-                <QuickbooksRefSelect
-                  kind="asset"
-                  value={assetAccountId}
-                  onChange={setAssetAccountId}
-                  disabled={isQbo}
-                />
-                {isQbo && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Locked — QuickBooks fixes the inventory asset account once an item exists.
-                  </p>
-                )}
-              </FieldRow>
-              <FieldRow label="Purchase tax">
-                <QuickbooksRefSelect kind="taxcode" value={taxCodeId} onChange={setTaxCodeId} />
               </FieldRow>
             </div>
           </Section>

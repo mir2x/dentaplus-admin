@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import { Order, OrderFulfillmentStatus, OrderPaymentStatus } from '@/types/api';
 import { formatCents, formatDate, formatDateTime } from '@/lib/format';
 import { OrderPaymentStatusBadge, OrderStatusBadge } from '@/components/orders/order-status-badge';
-import { OrderQuickbooksSection } from '@/components/orders/order-quickbooks-section';
+import { OrderInvoiceCard } from '@/components/orders/order-invoice-card';
 import { RefundPanel } from '@/components/orders/refund-panel';
 import {
   Select,
@@ -40,8 +40,8 @@ const FULFILLMENT_LABELS: Record<OrderFulfillmentStatus, string> = {
 };
 
 // Payment status: UNPAID/PARTIALLY_PAID/PAID normally happen automatically
-// (direct at checkout, credit from the QBO invoice balance) — this lets
-// staff set them manually too, plus REFUNDED, which is always manual.
+// (direct at checkout, credit from the invoice's outstanding balance) — this
+// lets staff set them manually too, plus REFUNDED, which is always manual.
 const NEXT_PAYMENT_STATUSES: Partial<Record<OrderPaymentStatus, OrderPaymentStatus[]>> = {
   UNPAID:         ['PARTIALLY_PAID', 'PAID'],
   PARTIALLY_PAID: ['PAID', 'REFUNDED'],
@@ -369,8 +369,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </section>
 
-          {/* QuickBooks */}
-          <OrderQuickbooksSection order={order} />
+          {/* Invoice */}
+          <OrderInvoiceCard order={order} />
 
           {/* Addresses */}
           {(billing || shipping) && (

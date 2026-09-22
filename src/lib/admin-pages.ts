@@ -4,7 +4,6 @@ import {
   ScrollText,
   Landmark,
   CreditCard,
-  RefreshCw,
   ShoppingCart,
   Package,
   PackageSearch,
@@ -59,7 +58,6 @@ export const ADMIN_PAGE_GROUPS: AdminPageGroup[] = [
       { href: '/invoices', label: 'Invoices', icon: FileText },
       { href: '/statements', label: 'Statements', icon: ScrollText },
       { href: '/accounts-receivable', label: 'Accounts Receivable', icon: Landmark },
-      { href: '/quickbooks', label: 'QuickBooks', icon: RefreshCw },
     ],
   },
   {

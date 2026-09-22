@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Order, OrderFulfillmentStatus, OrderPaymentStatus, PaginatedResponse } from '@/types/api';
+import { InvoiceStatus, Order, OrderFulfillmentStatus, OrderPaymentStatus, PaginatedResponse } from '@/types/api';
 import {
   Table,
   TableBody,
@@ -26,6 +26,7 @@ import { PaginationControls } from '@/components/ui/pagination-controls';
 import { OrderPaymentStatusBadge, OrderStatusBadge } from './order-status-badge';
 import { Badge } from '@/components/ui/badge';
 import { formatCents, formatDate } from '@/lib/format';
+import { InvoiceStatusBadge } from '@/components/invoices/invoice-status-badge';
 
 const FULFILLMENT_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: 'All fulfillment' },
@@ -44,13 +45,25 @@ const PAYMENT_OPTIONS: { value: string; label: string }[] = [
   { value: 'REFUNDED', label: 'Refunded' },
 ];
 
+const INVOICE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'all', label: 'All invoices' },
+  { value: 'NONE', label: 'Awaiting invoice' },
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'OPEN', label: 'Sent' },
+  { value: 'OVERDUE', label: 'Overdue' },
+  { value: 'PARTIAL', label: 'Partially paid' },
+  { value: 'PAID', label: 'Paid' },
+];
+
 const LIMIT = 25;
 
 export function OrdersView() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [fulfillmentStatus, setFulfillmentStatus] = useState('all');
   const [paymentStatus, setPaymentStatus] = useState('all');
+  const [invoiceStatus, setInvoiceStatus] = useState(() => searchParams.get('invoiceStatus') ?? 'all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
@@ -70,11 +83,12 @@ export function OrdersView() {
   }, []);
 
   const { data: result, isLoading } = useQuery<PaginatedResponse<Order>>({
-    queryKey: ['orders', fulfillmentStatus, paymentStatus, search, page],
+    queryKey: ['orders', fulfillmentStatus, paymentStatus, invoiceStatus, search, page],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
       if (fulfillmentStatus !== 'all') params.fulfillmentStatus = fulfillmentStatus;
       if (paymentStatus !== 'all') params.paymentStatus = paymentStatus;
+      if (invoiceStatus !== 'all') params.invoiceStatus = invoiceStatus;
       if (search) params.q = search;
       return (await api.get('/admin/orders', { params })).data;
     },
@@ -119,6 +133,21 @@ export function OrdersView() {
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={invoiceStatus}
+          onValueChange={(v) => handleFilterChange(() => setInvoiceStatus(v ?? 'all'))}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {INVOICE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-md border">
@@ -130,6 +159,7 @@ export function OrdersView() {
               <TableHead>Date</TableHead>
               <TableHead>Fulfillment</TableHead>
               <TableHead>Payment</TableHead>
+              <TableHead>Invoice</TableHead>
               <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
@@ -137,7 +167,7 @@ export function OrdersView() {
             {isLoading
               ? Array.from({ length: LIMIT }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -171,6 +201,15 @@ export function OrdersView() {
                     </TableCell>
                     <TableCell>
                       <OrderPaymentStatusBadge status={order.paymentStatus as OrderPaymentStatus} />
+                    </TableCell>
+                    <TableCell>
+                      {order.invoices?.[0] ? (
+                        <InvoiceStatusBadge status={order.invoices[0].status as InvoiceStatus} />
+                      ) : order.channel === 'CREDIT' ? (
+                        <Badge variant="outline" className="text-xs">Awaiting invoice</Badge>
+                      ) : (
+                        '—'
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCents(order.totalCents, order.currency)}

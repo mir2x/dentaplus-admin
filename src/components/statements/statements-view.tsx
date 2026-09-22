@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download } from 'lucide-react';
+import { Download, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { PaginatedResponse, Statement } from '@/types/api';
@@ -79,6 +79,15 @@ export function StatementsView() {
     }
   }
 
+  const send = useMutation({
+    mutationFn: (id: string) => api.post(`/admin/statements/${id}/send`),
+    onSuccess: () => {
+      toast.success('Statement emailed to customer');
+      queryClient.invalidateQueries({ queryKey: ['statements'] });
+    },
+    onError: () => toast.error('Failed to send statement'),
+  });
+
   return (
     <div className="space-y-6">
       <Card>
@@ -90,8 +99,8 @@ export function StatementsView() {
             Statements are generated automatically on the 1st of each month for every customer
             with unpaid or partially-paid invoices, rolling the balance forward. You can also
             generate this month&apos;s statements now. Each generated statement is stored and can be
-            downloaded below as a PDF. Use CSV to export the statement register to Excel. Statements
-            are sent to customers manually from QuickBooks (Create Statements → Save and send).
+            downloaded below as a PDF, or sent to the customer with the Send button. Use CSV to
+            export the statement register to Excel.
           </p>
           <Button disabled={generate.isPending} onClick={() => generate.mutate()}>
             {generate.isPending ? 'Generating…' : 'Generate this month’s statements'}
@@ -134,7 +143,8 @@ export function StatementsView() {
                   <TableHead>Date</TableHead>
                   <TableHead>Period</TableHead>
                   <TableHead className="text-right">Closing balance</TableHead>
-                  <TableHead className="text-right">Download</TableHead>
+                  <TableHead className="text-right">Sent</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -156,7 +166,18 @@ export function StatementsView() {
                     <TableCell className="text-right">
                       {money(statement.closingBalance, statement.currency)}
                     </TableCell>
+                    <TableCell className="text-right text-xs text-muted-foreground">
+                      {statement.sentAt ? new Date(statement.sentAt).toLocaleDateString('en-AU') : '—'}
+                    </TableCell>
                     <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={send.isPending}
+                        onClick={() => send.mutate(statement.id)}
+                      >
+                        <Mail className="size-3.5" /> Send
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -174,7 +195,7 @@ export function StatementsView() {
                 ))}
                 {!statements.isLoading && statements.data?.data.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                       No statements found.
                     </TableCell>
                   </TableRow>

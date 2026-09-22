@@ -290,11 +290,6 @@ export function ProductsView() {
                               Draft
                             </Badge>
                           )}
-                          {product.quickbooksItemId && (
-                            <Badge variant="outline" className="text-[10px] px-1 py-0">
-                              QBO
-                            </Badge>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">

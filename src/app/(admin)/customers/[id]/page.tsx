@@ -6,16 +6,11 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, X } from 'lucide-react';
 import { api } from '@/lib/api';
-import {
-  Customer360,
-  CustomerAddress,
-  QboCustomerSnapshot,
-} from '@/types/api';
+import { Customer360, CustomerAddress } from '@/types/api';
 import { formatCents, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { QuickbooksRefreshCard } from '@/components/shared/quickbooks-refresh-card';
 import { LoginAsButton } from '@/components/customers/login-as-button';
 
 export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -111,7 +106,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-5">
-          <Section title="Identity (synced from QuickBooks)">
+          <Section title="Identity">
             <Row label="Display name" value={c.displayName} />
             <Row label="First name" value={c.firstName} />
             <Row label="Last name" value={c.lastName} />
@@ -152,7 +147,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           <MiniList title="Recent orders" rows={c.orders} empty="No orders"
             render={(o) => <Line key={o.id} left={o.orderNo} mid={o.fulfillmentStatus} right={formatCents(o.totalCents)} />} />
           <MiniList title="Invoices" rows={c.invoices} empty="No invoices"
-            render={(i) => <Line key={i.id} left={i.invoiceNo} mid={i.syncStatus ?? i.type} right={`${formatCents(i.outstandingCents)} due`} />} />
+            render={(i) => <Line key={i.id} left={i.invoiceNo} mid={i.status} right={`${formatCents(i.outstandingCents)} due`} />} />
           <MiniList title="Statements" rows={c.statements} empty="No statements"
             render={(s) => <Line key={s.id} left={s.statementNo} mid={formatDate(s.statementDate)} right={formatCents(s.closingBalance)} />} />
         </div>
@@ -222,35 +217,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             </Section>
           )}
 
-          <QuickbooksRefreshCard<QboCustomerSnapshot>
-            endpoint={`/admin/customers/${c.id}/quickbooks`}
-            queryKey={['customer-qbo', c.id]}
-            render={(snap) => <QboCustomerView snap={snap} />}
-          />
-
           <Section title="Meta">
-            <Row label="QuickBooks customer ID" value={c.quickbooksCustomerId} />
             <Row label="Username" value={c.username} />
             <Row label="Created" value={formatDate(c.createdAt)} />
           </Section>
         </div>
       </div>
-    </div>
-  );
-}
-
-function QboCustomerView({ snap }: { snap: QboCustomerSnapshot }) {
-  if (!snap.linked) return <p className="text-sm text-muted-foreground">Not linked to QuickBooks.</p>;
-  if (!snap.connected) return <p className="text-sm text-destructive">Could not reach QuickBooks. {snap.error}</p>;
-  const q = snap.customer;
-  return (
-    <div className="space-y-1.5 text-sm">
-      <Row label="Display name" value={q.DisplayName} />
-      <Row label="Company" value={q.CompanyName} />
-      <Row label="Email" value={q.PrimaryEmailAddr?.Address} />
-      <Row label="Phone" value={q.PrimaryPhone?.FreeFormNumber} />
-      <Row label="Balance" value={q.Balance != null ? `$${q.Balance.toFixed(2)}` : null} />
-      <Row label="Active" value={q.Active == null ? null : q.Active ? 'Yes' : 'No'} />
     </div>
   );
 }

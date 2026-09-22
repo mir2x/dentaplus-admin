@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { QuickbooksRefSelect } from '@/components/products/quickbooks-ref-select';
 import {
   InlineCategoryCreate,
   InlineTagCreate,
@@ -71,13 +70,9 @@ export default function NewProductPage() {
   const [regularPrice, setRegularPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
 
-  // Purchasing & QuickBooks
+  // Purchasing
   const [supplier, setSupplier] = useState('');
   const [cost, setCost] = useState('');
-  const [incomeAccountId, setIncomeAccountId] = useState('');
-  const [expenseAccountId, setExpenseAccountId] = useState('');
-  const [assetAccountId, setAssetAccountId] = useState('');
-  const [taxCodeId, setTaxCodeId] = useState('');
 
   // Descriptions
   const [shortDesc, setShortDesc] = useState('');
@@ -151,10 +146,6 @@ export default function NewProductPage() {
               salePrice: salePrice ? parseFloat(salePrice) : undefined,
               supplier: supplier || undefined,
               cost: cost ? parseFloat(cost) : undefined,
-              quickbooksIncomeAccountId: incomeAccountId || undefined,
-              quickbooksExpenseAccountId: expenseAccountId || undefined,
-              quickbooksAssetAccountId: assetAccountId || undefined,
-              quickbooksTaxCodeId: taxCodeId || undefined,
             }),
         catalogVisibility,
         taxStatus,
@@ -205,8 +196,8 @@ export default function NewProductPage() {
             <p className="text-sm font-medium">Has variants</p>
             <p className="text-xs text-muted-foreground">
               {hasVariant
-                ? 'SKUs + QuickBooks items live on each variant (add them after creating).'
-                : 'This product is a single SKU and syncs to QuickBooks on save.'}
+                ? 'SKUs live on each variant (add them after creating).'
+                : 'This product is a single SKU.'}
             </p>
           </div>
           <Switch checked={hasVariant} onCheckedChange={setHasVariant} />
@@ -349,11 +340,11 @@ export default function NewProductPage() {
           </div>
         )}
 
-        {/* ── Purchasing & QuickBooks ── */}
+        {/* ── Purchasing ── */}
         {!hasVariant && (
           <div className="border-t pt-4 space-y-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Purchasing & QuickBooks
+              Purchasing
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Cost ($)">
@@ -365,23 +356,6 @@ export default function NewProductPage() {
                   value={supplier}
                   onChange={(e) => setSupplier(e.target.value)}
                 />
-              </Field>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Supplier is matched or created as a Vendor in QuickBooks by this exact name.
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Income account">
-                <QuickbooksRefSelect kind="income" value={incomeAccountId} onChange={setIncomeAccountId} />
-              </Field>
-              <Field label="Expense account">
-                <QuickbooksRefSelect kind="expense" value={expenseAccountId} onChange={setExpenseAccountId} />
-              </Field>
-              <Field label="Inventory asset account">
-                <QuickbooksRefSelect kind="asset" value={assetAccountId} onChange={setAssetAccountId} />
-              </Field>
-              <Field label="Purchase tax">
-                <QuickbooksRefSelect kind="taxcode" value={taxCodeId} onChange={setTaxCodeId} />
               </Field>
             </div>
           </div>

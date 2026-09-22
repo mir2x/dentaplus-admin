@@ -29,7 +29,6 @@ import {
   resolveInventoryPayload,
   statusFromInventory,
 } from '@/components/products/inventory-status-field';
-import { QuickbooksRefSelect } from '@/components/products/quickbooks-ref-select';
 
 interface Props {
   productId: string;
@@ -101,18 +100,6 @@ function VariantForm({
   const [cost, setCost] = useState(
     isEdit && editing.costCents != null ? (editing.costCents / 100).toFixed(2) : '',
   );
-  const [incomeAccountId, setIncomeAccountId] = useState(
-    isEdit ? (editing.quickbooksIncomeAccountId ?? '') : '',
-  );
-  const [expenseAccountId, setExpenseAccountId] = useState(
-    isEdit ? (editing.quickbooksExpenseAccountId ?? '') : '',
-  );
-  const [assetAccountId, setAssetAccountId] = useState(
-    isEdit ? (editing.quickbooksAssetAccountId ?? '') : '',
-  );
-  const [taxCodeId, setTaxCodeId] = useState(isEdit ? (editing.quickbooksTaxCodeId ?? '') : '');
-  const isVariantQbo = isEdit && !!editing.quickbooksItemId;
-
   const { data: attributes } = useQuery<Attribute[]>({
     queryKey: ['attributes'],
     queryFn: async () => (await api.get('/admin/attributes')).data,
@@ -193,10 +180,6 @@ function VariantForm({
         // "use default" reaches the backend as '' -> null, not "untouched".
         supplier,
         cost: cost ? parseFloat(cost) : undefined,
-        quickbooksIncomeAccountId: incomeAccountId,
-        quickbooksExpenseAccountId: expenseAccountId,
-        quickbooksAssetAccountId: assetAccountId,
-        quickbooksTaxCodeId: taxCodeId,
         options: options.filter((o) => o.attributeName && o.value),
         inventory: {
           ...resolveInventoryPayload(inventoryStatus, quantity),
@@ -229,7 +212,7 @@ function VariantForm({
       </SheetHeader>
 
       <div className="space-y-4 px-4 pb-6">
-        <Field label="SKU (required to sync to QuickBooks)">
+        <Field label="SKU">
           <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g. 9514270/DD" />
         </Field>
         <Field label="Variant name (optional)">
@@ -271,7 +254,7 @@ function VariantForm({
         </div>
 
         <div className="space-y-3 rounded-md border p-3">
-          <Label>Purchasing & QuickBooks</Label>
+          <Label>Purchasing</Label>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Cost ($)">
               <Input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
@@ -284,28 +267,6 @@ function VariantForm({
               />
             </Field>
           </div>
-          <Field label="Income account">
-            <QuickbooksRefSelect kind="income" value={incomeAccountId} onChange={setIncomeAccountId} />
-          </Field>
-          <Field label="Expense account">
-            <QuickbooksRefSelect kind="expense" value={expenseAccountId} onChange={setExpenseAccountId} />
-          </Field>
-          <Field label="Inventory asset account">
-            <QuickbooksRefSelect
-              kind="asset"
-              value={assetAccountId}
-              onChange={setAssetAccountId}
-              disabled={isVariantQbo}
-            />
-            {isVariantQbo && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Locked — QuickBooks fixes the inventory asset account once an item exists.
-              </p>
-            )}
-          </Field>
-          <Field label="Purchase tax">
-            <QuickbooksRefSelect kind="taxcode" value={taxCodeId} onChange={setTaxCodeId} />
-          </Field>
         </div>
 
         <Field label="Thumbnail">

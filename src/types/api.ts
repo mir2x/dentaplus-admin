@@ -32,7 +32,6 @@ export interface Order {
   payment: OrderPayment | null;
   shipping: OrderShipping | null;
   notes: OrderNote[];
-  quickbooksSyncPending?: boolean;
   invoices?: OrderInvoiceRef[];
   refunds?: Refund[];
   backOrders?: { id: string; backOrderNo: string }[];
@@ -65,8 +64,7 @@ export interface OrderInvoiceRef {
   type: string;
   totalCents: number;
   outstandingCents: number;
-  syncStatus: InvoiceSyncStatus | null;
-  quickbooksInvoiceId: string | null;
+  status: InvoiceStatus;
 }
 
 export interface OrderItem {
@@ -201,14 +199,9 @@ export interface Product {
   published: boolean;
   featured: boolean;
   shortDescription: string | null;
-  quickbooksItemId?: string | null;
   brand: string | null;
   supplier?: string | null;
   costCents?: number | null;
-  quickbooksIncomeAccountId?: string | null;
-  quickbooksExpenseAccountId?: string | null;
-  quickbooksAssetAccountId?: string | null;
-  quickbooksTaxCodeId?: string | null;
   prices: ProductPrice[];
   inventory: { inStock: boolean | null; quantity: number | null; backordersAllowed: boolean } | null;
   categories: { category: { id: string; name: string; slug: string } }[];
@@ -226,12 +219,6 @@ export interface ProductVariantDetail {
   thumbnailUrl?: string | null;
   supplier?: string | null;
   costCents?: number | null;
-  quickbooksIncomeAccountId?: string | null;
-  quickbooksExpenseAccountId?: string | null;
-  quickbooksAssetAccountId?: string | null;
-  quickbooksTaxCodeId?: string | null;
-  quickbooksItemId?: string | null;
-  quickbooksSyncedAt?: string | null;
   isActive: boolean;
   options: { attributeName: string; value: string }[];
   inventory: {
@@ -279,52 +266,6 @@ export interface ProductDetail extends Product {
   variants: ProductVariantDetail[];
   wholesaleRules: WholesaleRule[];
 }
-
-/** A pickable QuickBooks Account or TaxCode option (GET /admin/quickbooks/accounts|tax-codes). */
-export interface QboPickerOption {
-  id: string;
-  name: string;
-}
-
-/** Raw QuickBooks snapshots (on-demand refresh). */
-export interface QboItem {
-  Id: string;
-  Name?: string;
-  Sku?: string;
-  Description?: string;
-  UnitPrice?: number;
-  QtyOnHand?: number;
-  Type?: string;
-  Active?: boolean;
-}
-
-export interface QboCustomer {
-  Id: string;
-  DisplayName?: string;
-  CompanyName?: string;
-  Active?: boolean;
-  Balance?: number;
-  PrimaryEmailAddr?: { Address?: string };
-  PrimaryPhone?: { FreeFormNumber?: string };
-  BillAddr?: {
-    Line1?: string;
-    Line2?: string;
-    City?: string;
-    CountrySubDivisionCode?: string;
-    PostalCode?: string;
-    Country?: string;
-  };
-}
-
-export type QboProductSnapshot =
-  | { linked: false }
-  | { linked: true; connected: true; item: QboItem }
-  | { linked: true; connected: false; error: string };
-
-export type QboCustomerSnapshot =
-  | { linked: false }
-  | { linked: true; connected: true; customer: QboCustomer }
-  | { linked: true; connected: false; error: string };
 
 export interface CustomerRole {
   id: string;
@@ -449,7 +390,7 @@ export interface PaginatedResponse<T> {
   meta: { page: number; limit: number; total: number; pages: number };
 }
 
-// ── Operations: credit / invoicing / statements / QuickBooks ──────────────────
+// ── Operations: credit / invoicing / statements ────────────────────────────
 
 export type CreditApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -520,7 +461,9 @@ export interface CreditApplication {
   };
 }
 
-export type InvoiceSyncStatus =
+// Staff-driven lifecycle (create -> send -> paid/void). OVERDUE is derived by
+// the backend at read time from OPEN + a past due date, never stored as such.
+export type InvoiceStatus =
   | 'DRAFT'
   | 'OPEN'
   | 'OVERDUE'
@@ -531,14 +474,25 @@ export type InvoiceSyncStatus =
 export interface AdminInvoice {
   id: string;
   invoiceNo: string;
+  orderId: string | null;
   type: 'INVOICE' | 'CREDIT_NOTE';
+  reference: string | null;
+  consignment: string | null;
+  subtotal: number;
+  tax: number;
   total: number;
   outstanding: number;
   amountPaid: number;
-  status: InvoiceSyncStatus | null;
-  payViaQuickbooks: boolean;
+  currency: string;
+  status: InvoiceStatus;
+  hasPdf: boolean;
   dueDate: string | null;
   dateInvoiced: string;
+  sentAt: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
+  paidAt: string | null;
+  notes: string | null;
   customer?: {
     id: string;
     email: string;
@@ -547,71 +501,102 @@ export interface AdminInvoice {
   };
 }
 
-interface QboRef {
-  value?: string;
-  name?: string;
-}
-interface QboAddr {
-  Line1?: string;
-  Line2?: string;
-  City?: string;
-  CountrySubDivisionCode?: string;
-  PostalCode?: string;
-  Country?: string;
-}
-export interface QboInvoiceLine {
-  Id?: string;
-  LineNum?: number;
-  Description?: string;
-  Amount?: number;
-  DetailType?: string;
-  SalesItemLineDetail?: {
-    ItemRef?: QboRef;
-    Qty?: number;
-    UnitPrice?: number;
-    TaxCodeRef?: QboRef;
-  };
-}
-export interface QboInvoice {
-  Id: string;
-  DocNumber?: string;
-  TxnDate?: string;
-  DueDate?: string;
-  CustomerRef?: QboRef;
-  BillEmail?: { Address?: string };
-  BillAddr?: QboAddr;
-  ShipAddr?: QboAddr;
-  SalesTermRef?: QboRef;
-  ShipMethodRef?: QboRef;
-  ShipDate?: string;
-  TrackingNum?: string;
-  CustomField?: { Name?: string; StringValue?: string }[];
-  Line?: QboInvoiceLine[];
-  TxnTaxDetail?: { TotalTax?: number };
-  TotalAmt?: number;
-  Balance?: number;
-  CustomerMemo?: { value?: string };
-  PrivateNote?: string;
+export interface InvoiceLine {
+  id: string;
+  lineType: string;
+  sku: string | null;
+  description: string | null;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  unitPriceCents: number;
+  amountCents: number;
+  taxable: boolean;
 }
 
-export type QboInvoiceSnapshot =
-  | { linked: false }
-  | { linked: true; connected: true; invoice: QboInvoice | null; skuByItemRef: Record<string, string> }
-  | { linked: true; connected: false; error: string };
+export type PaymentMethod = 'BANK_TRANSFER' | 'CARD' | 'CASH' | 'CHEQUE' | 'OTHER';
 
-export interface AdminInvoiceDetail extends AdminInvoice {
+export interface InvoicePayment {
+  id: string;
+  amount: number;
+  amountCents: number;
+  paidAt: string;
+  method: string | null;
   reference: string | null;
-  consignment: string | null;
-  subtotal: number;
-  tax: number;
-  currency: string;
-  paidAt: string | null;
   notes: string | null;
-  payments: { amount: number; paidAt: string; source: string }[];
-  quickbooks: {
-    raw: QboInvoice | null;
-    syncedAt: string | null;
-  };
+  source: string;
+  // Only staff-recorded (MANUAL) entries can be reversed from the admin panel.
+  reversible: boolean;
+}
+
+export interface AdminInvoiceDetail extends Omit<AdminInvoice, 'customer'> {
+  customer: { id: string; email: string; displayName: string | null; dentaplusId: string | null } | null;
+  order: { id: string; orderNo: string; channel: OrderChannel } | null;
+  // Lines/totals are frozen once a payment exists or the invoice is PAID/VOID.
+  locked: boolean;
+  payments: InvoicePayment[];
+  lines: InvoiceLine[];
+  pdfUrl: string | null;
+}
+
+export interface InvoiceLineInput {
+  sku?: string;
+  description: string;
+  quantity: number;
+  unitPriceCents: number;
+  // false = GST-free line. Defaults to true.
+  taxable?: boolean;
+}
+
+export interface CreateInvoiceInput {
+  orderId?: string;
+  userId: string;
+  reference?: string;
+  dateInvoiced?: string;
+  dueDate?: string;
+  consignment?: string;
+  lines?: InvoiceLineInput[];
+  // Header-only totals, used only when `lines` is omitted.
+  subtotalCents?: number;
+  taxCents?: number;
+  totalCents?: number;
+  notes?: string;
+}
+
+export interface UpdateInvoiceInput {
+  reference?: string | null;
+  dateInvoiced?: string;
+  dueDate?: string | null;
+  consignment?: string | null;
+  notes?: string | null;
+  lines?: InvoiceLineInput[];
+  subtotalCents?: number;
+  taxCents?: number;
+  totalCents?: number;
+}
+
+export interface RecordPaymentInput {
+  amountCents: number;
+  paidAt?: string;
+  method: PaymentMethod;
+  reference?: string;
+  notes?: string;
+}
+
+/** Pre-filled invoice (lines + totals) for an order — GET .../invoice-draft. Nothing is saved. */
+export interface OrderInvoiceDraft {
+  orderId: string;
+  orderNo: string;
+  userId: string;
+  customer: { id: string; email: string; displayName: string | null };
+  reference: string;
+  consignment: string | null;
+  dueDate: string;
+  lines: InvoiceLineInput[];
+  subtotalCents: number;
+  taxCents: number;
+  totalCents: number;
+  existingInvoices: { id: string; invoiceNo: string; status: InvoiceStatus }[];
 }
 
 export interface Statement {
@@ -623,6 +608,8 @@ export interface Statement {
   openingBalance: number;
   closingBalance: number;
   currency?: string;
+  notes?: string | null;
+  sentAt: string | null;
 }
 
 export interface AgingBuckets {
@@ -642,18 +629,8 @@ export interface ArReport {
   })[];
 }
 
-export interface QuickbooksStatus {
-  configured: boolean;
-  connected: boolean;
-  environment: string;
-  realmId: string | null;
-  accessExpiresAt: string | null;
-  refreshExpiresAt: string | null;
-}
-
 export interface Customer360 extends Customer {
   dentaplusId: string | null;
-  quickbooksCustomerId: string | null;
   creditAccountStatus: string;
   username: string | null;
   avatarUrl: string | null;
@@ -681,7 +658,7 @@ export interface Customer360 extends Customer {
     type: string;
     totalCents: number;
     outstandingCents: number;
-    syncStatus: InvoiceSyncStatus | null;
+    status: InvoiceStatus;
     dueDate: string | null;
     dateInvoiced: string;
   }[];
@@ -806,7 +783,8 @@ export interface DashboardSummary {
   pendingCreditApplications: number;
   newContactMessages: number;
   overdueInvoices: number;
-  pendingQboPushes: number;
+  ordersAwaitingInvoice: number;
+  draftInvoices: number;
   inventory: { lowStock: number; outOfStock: number };
   accountsReceivable: { outstanding: number; aging: AgingBuckets };
 }
