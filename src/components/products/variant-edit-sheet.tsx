@@ -302,9 +302,15 @@ function VariantForm({
                 <Select value={o.attributeName} onValueChange={(v) => setOption(i, { attributeName: v ?? '', value: '' })}>
                   <SelectTrigger className="flex-1"><SelectValue placeholder="Attribute" /></SelectTrigger>
                   <SelectContent>
-                    {attributes?.map((a) => (
-                      <SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>
-                    ))}
+                    {attributes
+                      ?.filter(
+                        (a) =>
+                          a.name === o.attributeName ||
+                          !options.some((opt, idx) => idx !== i && opt.attributeName === a.name),
+                      )
+                      .map((a) => (
+                        <SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <Select value={o.value} onValueChange={(v) => setOption(i, { value: v ?? '' })}>
@@ -371,7 +377,13 @@ function VariantForm({
           ))}
 
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setOptions((cur) => [...cur, { attributeName: '', value: '' }])}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!!attributes && options.length >= attributes.length}
+              onClick={() => setOptions((cur) => [...cur, { attributeName: '', value: '' }])}
+            >
               <Plus className="size-4" /> Add attribute
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setNewAttrOpen((v) => !v)}>
