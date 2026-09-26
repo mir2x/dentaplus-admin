@@ -1,9 +1,17 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/stores/auth';
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+const baseURL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  'http://localhost:3000/api/v1';
 
-export const api = axios.create({ baseURL });
+export const api = axios.create({
+  baseURL,
+  headers: {
+    'ngrok-skip-browser-warning': 'true',
+  },
+});
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (!axios.isAxiosError(error)) return fallback;
@@ -15,7 +23,12 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
 // Interceptor-free client for the token refresh call. Using an axios instance
 // (rather than a hand-built URL) normalizes a trailing slash in baseURL so we
 // never hit `/api/v1//auth/refresh`, and avoids 401-interceptor recursion.
-const refreshClient = axios.create({ baseURL });
+const refreshClient = axios.create({
+  baseURL,
+  headers: {
+    'ngrok-skip-browser-warning': 'true',
+  },
+});
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
