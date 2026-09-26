@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Upload, X } from 'lucide-react';
 import { api, getApiErrorMessage } from '@/lib/api';
-import { Category, Collection, ProductType, Tag } from '@/types/api';
+import { Category, Collection, ProductType } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,7 @@ import {
   InlineCategoryCreate,
   InlineTagCreate,
 } from '@/components/products/inline-taxonomy-create';
+import { TagPicker, type TagOption } from '@/components/products/tag-picker';
 
 const TYPE_OPTIONS: { value: ProductType; label: string }[] = [
   { value: 'GENERAL', label: 'General' },
@@ -96,7 +97,7 @@ export default function NewProductPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [tagIds, setTagIds] = useState<string[]>([]);
+  const [tags, setTags] = useState<TagOption[]>([]);
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
 
   const { data: categories } = useQuery<Category[]>({
@@ -106,10 +107,6 @@ export default function NewProductPage() {
   const { data: collections } = useQuery<Collection[]>({
     queryKey: ['collections'],
     queryFn: async () => (await api.get('/admin/collections')).data,
-  });
-  const { data: tags } = useQuery<Tag[]>({
-    queryKey: ['tags'],
-    queryFn: async () => (await api.get('/admin/tags')).data,
   });
 
   async function handleFile(file: File) {
@@ -156,7 +153,7 @@ export default function NewProductPage() {
         published,
         featured,
         categoryIds,
-        tagIds,
+        tagIds: tags.map((tag) => tag.value),
         collectionIds,
       });
       for (let i = 0; i < images.length; i++) {
@@ -277,30 +274,15 @@ export default function NewProductPage() {
         {/* ── Tags ── */}
         <div className="space-y-1.5">
           <Label>Tags</Label>
-          {tags?.length ? (
-            <div className="flex flex-wrap gap-2 rounded-md border p-3">
-              {tags.map((tag) => (
-                <label key={tag.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={tagIds.includes(tag.id)}
-                    onChange={() =>
-                      setTagIds((current) =>
-                        current.includes(tag.id)
-                          ? current.filter((id) => id !== tag.id)
-                          : [...current, tag.id],
-                      )
-                    }
-                  />
-                  {tag.name}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">No tags found.</p>
-          )}
+          <TagPicker selected={tags} onChange={setTags} />
           <InlineTagCreate
-            onCreated={(tag) => setTagIds((current) => [...new Set([...current, tag.id])])}
+            onCreated={(tag) =>
+              setTags((current) =>
+                current.some((t) => t.value === tag.id)
+                  ? current
+                  : [...current, { value: tag.id, label: tag.name }],
+              )
+            }
           />
         </div>
 

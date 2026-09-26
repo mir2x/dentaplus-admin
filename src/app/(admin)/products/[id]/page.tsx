@@ -11,7 +11,6 @@ import {
   Collection,
   ProductDetail,
   ProductType,
-  Tag,
 } from '@/types/api';
 import { formatCents, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
@@ -33,6 +32,7 @@ import {
   InlineCategoryCreate,
   InlineTagCreate,
 } from '@/components/products/inline-taxonomy-create';
+import { TagPicker, type TagOption } from '@/components/products/tag-picker';
 import { ProductBannerPanel } from '@/components/products/product-banner-panel';
 import { WholesaleRulesPanel } from '@/components/products/wholesale-rules-panel';
 import { VariantsManager } from '@/components/products/variants-manager';
@@ -348,7 +348,9 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
     product.categories.map((c) => c.category.id),
   );
   const [categorySearch, setCategorySearch] = useState('');
-  const [tagIds, setTagIds] = useState<string[]>(product.tags.map((t) => t.tag.id));
+  const [tags, setTags] = useState<TagOption[]>(
+    product.tags.map((t) => ({ value: t.tag.id, label: t.tag.name })),
+  );
   const [collectionIds, setCollectionIds] = useState<string[]>(
     product.collections.map((c) => c.collection.id),
   );
@@ -357,10 +359,6 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
   const { data: allCategories } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => (await api.get('/admin/categories')).data,
-  });
-  const { data: allTags } = useQuery<Tag[]>({
-    queryKey: ['tags'],
-    queryFn: async () => (await api.get('/admin/tags')).data,
   });
   const { data: allCollections } = useQuery<Collection[]>({
     queryKey: ['collections'],
@@ -408,7 +406,7 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
         ...identity,
         ...pricing,
         categoryIds,
-        tagIds,
+        tagIds: tags.map((tag) => tag.value),
         collectionIds,
       });
     },
@@ -465,12 +463,6 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
             cat.name.toLowerCase().includes(categorySearchLower) || cat.children.length > 0,
         )
     : (allCategories ?? []);
-
-  const tagNameById = new Map<string, string>();
-  allTags?.forEach((tag) => tagNameById.set(tag.id, tag.name));
-
-  const toggleTag = (id: string) =>
-    setTagIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   const collectionNameById = new Map<string, string>();
   allCollections?.forEach((c) => collectionNameById.set(c.id, c.title));
@@ -774,55 +766,16 @@ function ProductEditForm({ product, onDone }: { product: ProductDetail; onDone: 
         </Section>
 
         <Section title="Tags">
-          <div className="mb-3">
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-              Assigned ({tagIds.length})
-            </p>
-            {tagIds.length ? (
-              <div className="flex flex-wrap gap-1.5">
-                {tagIds.map((id) => {
-                  const name = tagNameById.get(id) ?? id;
-                  return (
-                    <span
-                      key={id}
-                      className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs"
-                    >
-                      {name}
-                      <button
-                        type="button"
-                        onClick={() => toggleTag(id)}
-                        aria-label={`Remove ${name}`}
-                        className="rounded-full p-0.5 hover:bg-muted-foreground/20"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </span>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">No tags assigned.</p>
-            )}
-          </div>
-
-          {allTags?.length ? (
-            <div className="rounded-md border divide-y max-h-56 overflow-y-auto">
-              {allTags.map((tag) => (
-                <PickerRow
-                  key={tag.id}
-                  id={tag.id}
-                  name={tag.name}
-                  selected={tagIds.includes(tag.id)}
-                  onToggle={toggleTag}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">No tags defined.</p>
-          )}
+          <TagPicker selected={tags} onChange={setTags} />
           <div className="mt-2">
             <InlineTagCreate
-              onCreated={(tag) => setTagIds((current) => [...new Set([...current, tag.id])])}
+              onCreated={(tag) =>
+                setTags((current) =>
+                  current.some((t) => t.value === tag.id)
+                    ? current
+                    : [...current, { value: tag.id, label: tag.name }],
+                )
+              }
             />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">Saved with the product.</p>
