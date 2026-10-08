@@ -46,7 +46,7 @@ interface FormState {
   minQuantity: number;
   triggerMode: OfferTriggerMode;
   rewardType: OfferRewardType;
-  discountAmountCents: string;
+  discountAmountDollars: string;
   discountBps: string;
   freeQty: string;
   freeScope: FreeProductScope;
@@ -67,7 +67,8 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           minQuantity: editing.minQuantity,
           triggerMode: editing.triggerMode ?? 'INDIVIDUAL',
           rewardType: editing.rewardType,
-          discountAmountCents: editing.discountAmountCents != null ? String(editing.discountAmountCents) : '',
+          discountAmountDollars:
+            editing.discountAmountCents != null ? String(editing.discountAmountCents / 100) : '',
           discountBps: editing.discountBps != null ? String(editing.discountBps) : '',
           freeQty: editing.freeQty != null ? String(editing.freeQty) : '1',
           freeScope: editing.freeScope ?? 'SAME',
@@ -81,7 +82,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
           minQuantity: 1,
           triggerMode: 'INDIVIDUAL',
           rewardType: 'FIXED_DISCOUNT',
-          discountAmountCents: '',
+          discountAmountDollars: '',
           discountBps: '',
           freeQty: '1',
           freeScope: 'SAME',
@@ -105,7 +106,7 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
       };
       let reward: Record<string, unknown> = {};
       if (form.rewardType === 'FIXED_DISCOUNT') {
-        reward = { discountAmountCents: Number(form.discountAmountCents) };
+        reward = { discountAmountCents: Math.round(Number(form.discountAmountDollars) * 100) };
       } else if (form.rewardType === 'PERCENTAGE_DISCOUNT') {
         reward = { discountBps: Number(form.discountBps) };
       } else {
@@ -194,11 +195,13 @@ function OfferForm({ editing, onClose }: { editing: Offer | 'new'; onClose: () =
         )}
 
         {form.rewardType === 'FIXED_DISCOUNT' && (
-          <Field label="Discount amount (cents)">
+          <Field label="Discount amount ($)">
             <Input
               type="number"
-              value={form.discountAmountCents}
-              onChange={(e) => setForm({ ...form, discountAmountCents: e.target.value })}
+              min={0}
+              step="0.01"
+              value={form.discountAmountDollars}
+              onChange={(e) => setForm({ ...form, discountAmountDollars: e.target.value })}
             />
           </Field>
         )}
