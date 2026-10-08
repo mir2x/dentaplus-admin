@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { storefrontCategoryUrl } from '@/lib/storefront';
 import { CategoryEditSheet } from './category-edit-sheet';
 
 const LIMIT = 20;
@@ -128,6 +129,15 @@ export function CategoriesView() {
                       }
                     >
                       <ExternalLink className="size-3.5" /> View products
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      render={
+                        <a href={storefrontCategoryUrl(category.slug)} target="_blank" rel="noreferrer" />
+                      }
+                    >
+                      View on site
                     </Button>
                   </TableCell>
                 </TableRow>

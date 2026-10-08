@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/select';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ExternalLink } from 'lucide-react';
+import { storefrontPageUrl } from '@/lib/storefront';
 
 const CUSTOM_PAGES = [
   { slug: 'refund-policy', label: 'Refund and Returns Policy' },
@@ -71,20 +73,28 @@ export function PagesView() {
           <CardTitle className="text-base">Page Editor</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-1.5 max-w-sm">
-            <Label>Select Page</Label>
-            <Select value={selectedSlug} onValueChange={(v) => setSelectedSlug(v ?? '')}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CUSTOM_PAGES.map((page) => (
-                  <SelectItem key={page.slug} value={page.slug}>
-                    {page.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-end gap-2">
+            <div className="space-y-1.5 w-full max-w-sm">
+              <Label>Select Page</Label>
+              <Select value={selectedSlug} onValueChange={(v) => setSelectedSlug(v ?? '')}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CUSTOM_PAGES.map((page) => (
+                    <SelectItem key={page.slug} value={page.slug}>
+                      {page.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant="outline"
+              render={<a href={storefrontPageUrl(selectedSlug)} target="_blank" rel="noreferrer" />}
+            >
+              <ExternalLink className="size-3.5" /> View on site
+            </Button>
           </div>
 
           <div className="space-y-1.5">

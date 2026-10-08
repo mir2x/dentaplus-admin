@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
-import { ProductVariantDetail } from '@/types/api';
+import { ProductDetail, ProductVariantDetail } from '@/types/api';
+import { storefrontProductUrl } from '@/lib/storefront';
 import { formatCents } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +38,12 @@ export default function VariantDetailPage({
     queryFn: async () => (await api.get(`/admin/products/${productId}/variants`)).data,
   });
   const v = variants?.find((x) => x.id === variantId);
+
+  // Variants have no page of their own on the storefront — link to the parent product.
+  const { data: product } = useQuery<ProductDetail>({
+    queryKey: ['product', productId],
+    queryFn: async () => (await api.get(`/admin/products/${productId}`)).data,
+  });
 
   const del = useMutation({
     mutationFn: () => api.delete(`/admin/variants/${variantId}`),
@@ -77,6 +84,14 @@ export default function VariantDetailPage({
           <p className="text-sm text-muted-foreground">SKU {v.sku ?? '—'}</p>
         </div>
         <div className="flex items-center gap-2">
+          {product && (
+            <Button
+              variant="outline"
+              render={<a href={storefrontProductUrl(product.slug)} target="_blank" rel="noreferrer" />}
+            >
+              View on site
+            </Button>
+          )}
           <Button onClick={() => setEditing(true)}>Edit</Button>
           <Button variant="outline" disabled={del.isPending} onClick={() => del.mutate()}>
             {del.isPending ? 'Deleting…' : 'Delete'}

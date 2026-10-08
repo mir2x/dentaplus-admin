@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import { ChevronLeft, ImageIcon, Loader2, X } from 'lucide-react';
+import { ChevronLeft, ExternalLink, ImageIcon, Loader2, X } from 'lucide-react';
+import { storefrontBlogPostUrl } from '@/lib/storefront';
 
 function slugify(s: string) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -96,6 +97,16 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <h1 className="text-2xl font-bold tracking-tight">{isEdit ? 'Edit post' : 'New post'}</h1>
+        {/* Drafts aren't served by the storefront, so only link once the saved post is published. */}
+        {isEdit && post.isPublished && (
+          <Button
+            variant="outline"
+            className="ml-auto"
+            render={<a href={storefrontBlogPostUrl(post.slug)} target="_blank" rel="noreferrer" />}
+          >
+            <ExternalLink className="size-3.5" /> View on site
+          </Button>
+        )}
       </div>
 
       <div className="space-y-6">

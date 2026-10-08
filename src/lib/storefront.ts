@@ -9,3 +9,12 @@ export function storefrontProductUrl(slug: string): string {
 export function storefrontCategoryUrl(slug: string): string {
   return `${STOREFRONT_URL}/categories/${slug}`;
 }
+
+export function storefrontBlogPostUrl(slug: string): string {
+  return `${STOREFRONT_URL}/blog/${slug}`;
+}
+
+// Custom pages are served at the storefront root under their slug (/about, /refund-policy, …).
+export function storefrontPageUrl(slug: string): string {
+  return `${STOREFRONT_URL}/${slug}`;
+}
